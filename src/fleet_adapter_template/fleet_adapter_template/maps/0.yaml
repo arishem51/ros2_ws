@@ -1,0 +1,103 @@
+building_name: demo
+doors: {}
+levels:
+  L1:
+    lanes:
+    - - 0
+      - 1
+      - {}
+    - - 1
+      - 0
+      - {}
+    - - 1
+      - 2
+      - {is_bidirectional: false}
+    - - 2
+      - 3
+      - {is_bidirectional: false}
+    - - 3
+      - 4
+      - {is_bidirectional: false}
+    - - 4
+      - 5
+      - {is_bidirectional: false}
+    - - 5
+      - 6
+      - {is_bidirectional: false}
+    - - 6
+      - 7
+      - {is_bidirectional: false}
+    - - 7
+      - 8
+      - {is_bidirectional: false}
+    - - 8
+      - 9
+      - {is_bidirectional: false}
+    - - 9
+      - 10
+      - {is_bidirectional: false}
+    - - 10
+      - 11
+      - {is_bidirectional: false}
+    - - 12
+      - 13
+      - {}
+    - - 13
+      - 12
+      - {}
+    - - 3
+      - 13
+      - {is_bidirectional: false}
+    - - 4
+      - 14
+      - {is_bidirectional: false}
+    - - 5
+      - 8
+      - {is_bidirectional: false}
+    vertices:
+    - - 761.191
+      - -21.592
+      - {name: ''}
+    - - 708.817
+      - -22.18
+      - {name: ''}
+    - - 661.966
+      - -22.18
+      - {name: ''}
+    - - 662.552
+      - -71.374
+      - {name: ''}
+    - - 661.966
+      - -120.567
+      - {name: ''}
+    - - 661.966
+      - -170.932
+      - {name: ''}
+    - - 662.552
+      - -219.539
+      - {name: ''}
+    - - 714.673
+      - -220.125
+      - {name: ''}
+    - - 712.331
+      - -169.175
+      - {name: ''}
+    - - 713.502
+      - -125.252
+      - {name: ''}
+    - - 715.259
+      - -71.374
+      - {name: ''}
+    - - 711.745
+      - -21.595
+      - {name: ''}
+    - - 762.101
+      - -71.877
+      - {is_parking_spot: false, name: ''}
+    - - 712.916
+      - -71.959
+      - {name: ''}
+    - - 711.745
+      - -120.567
+      - {name: ''}
+lifts: {}

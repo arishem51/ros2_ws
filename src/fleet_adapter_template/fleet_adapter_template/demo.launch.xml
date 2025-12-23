@@ -1,0 +1,8 @@
+<?xml version='1.0' ?>
+
+<launch>
+    <arg name="use_sim_time" default="false" description="Use the /clock topic for time to sync with simulation"/>
+    <node pkg="rmf_traffic_ros2" exec="rmf_traffic_schedule" output="both" name="rmf_traffic_schedule_primary">
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
+</launch>
