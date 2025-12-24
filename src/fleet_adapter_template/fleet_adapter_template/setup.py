@@ -1,3 +1,4 @@
+import glob
 from setuptools import setup
 
 package_name = 'fleet_adapter_template'
@@ -14,6 +15,7 @@ setup(
         ('share/' + package_name + '/launch', [
             'demo.launch.xml',
         ]),
+        ('share/' + package_name + '/maps', glob.glob('maps/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

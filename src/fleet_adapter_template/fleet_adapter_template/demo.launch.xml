@@ -1,8 +1,27 @@
-<?xml version='1.0' ?>
+<?xml version='1.0'?>
 
 <launch>
-    <arg name="use_sim_time" default="false" description="Use the /clock topic for time to sync with simulation"/>
-    <node pkg="rmf_traffic_ros2" exec="rmf_traffic_schedule" output="both" name="rmf_traffic_schedule_primary">
-        <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="use_sim_time" default="false"
+        description="Use the /clock topic for time to sync with simulation" />
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_map_to_my_frame"
+        output="screen"
+        args="0 0 0 0 0 0 map my_frame" />
+    <node pkg="rmf_traffic_ros2" exec="rmf_traffic_schedule" output="both"
+        name="rmf_traffic_schedule_primary">
+        <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
+    <node pkg="rmf_building_map_tools" exec="building_map_server" output="screen"
+        name="building_map_server"
+        args="$(find-pkg-share fleet_adapter_template)/maps/demo.building.yaml"
+    >
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+    <group>
+        <include file="$(find-pkg-share rmf_visualization)/visualization.launch.xml">
+          <arg name="use_sim_time" value="$(var use_sim_time)"/>
+          <arg name="map_name" value="demo"/>
+          <arg name="viz_config_file" value ="$(find-pkg-share fleet_adapter_template)/maps/demo.rviz"/>
+          <arg name="headless" value="false"/>
+        </include>
+    </group>
 </launch>

@@ -84,7 +84,7 @@ ros2 run rmf_building_map_tools building_map_server ~/ros2_ws/src/fleet_adapter_
 ros2 run fleet_adapter_template fleet_adapter  -c ~/ros2_ws/src/fleet_adapter_template/fleet_adapter_template/config.yaml    -n ~/ros2_ws/src/fleet_adapter_template/fleet_adapter_template/maps/0.yaml
 
 # run visualization
-ros2 launch rmf_visualization visualization.launch.xml  map_name:=demo   viz_config_file:=~/ros2_ws/src/fleet_adapter_template/fleet_adapter_template/demo.rviz
+ros2 launch rmf_visualization visualization.launch.xml  map_name:=demo  viz_config_file:=~/ros2_ws/src/fleet_adapter_template/fleet_adapter_template/maps/demo.rviz
 
 # Same bur for demo
 
