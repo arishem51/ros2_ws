@@ -16,12 +16,23 @@
     >
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
+
+    <group>
+        <node pkg="fleet_adapter_template"
+            exec="fleet_adapter"
+            args="--config_file $(find-pkg-share fleet_adapter_template)/config.yaml --nav_graph $(find-pkg-share fleet_adapter_template)/maps/0.yaml"
+            output="both">
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+    </group>
+
     <group>
         <include file="$(find-pkg-share rmf_visualization)/visualization.launch.xml">
-          <arg name="use_sim_time" value="$(var use_sim_time)"/>
-          <arg name="map_name" value="demo"/>
-          <arg name="viz_config_file" value ="$(find-pkg-share fleet_adapter_template)/maps/demo.rviz"/>
-          <arg name="headless" value="false"/>
+            <arg name="use_sim_time" value="$(var use_sim_time)" />
+            <arg name="map_name" value="demo" />
+            <arg name="viz_config_file"
+                value="$(find-pkg-share fleet_adapter_template)/maps/demo.rviz" />
+            <arg name="headless" value="false" />
         </include>
     </group>
 </launch>

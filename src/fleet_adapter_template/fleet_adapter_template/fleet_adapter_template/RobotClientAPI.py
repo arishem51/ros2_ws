@@ -127,14 +127,19 @@ class RobotAPI:
         return False
 
     def get_data(self, robot_name: str):
-        ''' Returns a RobotUpdateData for one robot if a name is given. Otherwise
-        return a list of RobotUpdateData for all robots. '''
-        map = self.map(robot_name)
-        position = self.position(robot_name)
-        battery_soc = self.battery_soc(robot_name)
-        if not (map is None or position is None or battery_soc is None):
-            return RobotUpdateData(robot_name, map, position, battery_soc)
-        return None
+        fake_map = "L1"
+
+        fake_position = [14.172792629383936, -0.41270799313022244, 0.0]
+
+        fake_battery_soc = 0.85
+
+        return RobotUpdateData(
+            robot_name,
+            fake_map,
+            fake_position,
+            fake_battery_soc
+        )
+
 
 
 class RobotUpdateData:
