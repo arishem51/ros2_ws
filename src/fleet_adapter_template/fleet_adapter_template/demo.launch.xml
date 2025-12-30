@@ -33,6 +33,7 @@
             <arg name="viz_config_file"
                 value="$(find-pkg-share fleet_adapter_template)/maps/demo.rviz" />
             <arg name="headless" value="false" />
+            <arg name="lane_width" value="0.25" />
         </include>
     </group>
 </launch>
