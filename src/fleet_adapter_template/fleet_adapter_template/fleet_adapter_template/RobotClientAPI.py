@@ -21,24 +21,34 @@
     these functions.
 '''
 
+import logging
+import paho.mqtt.client as mqtt
+
+logger = logging.getLogger(__name__)
+
 
 class RobotAPI:
     # The constructor below accepts parameters typically required to submit
     # http requests. Users should modify the constructor as per the
     # requirements of their robot's API
     def __init__(self, config_yaml):
-        self.prefix = config_yaml['prefix']
-        self.user = config_yaml['user']
-        self.password = config_yaml['password']
+        self.mqtt_broker = config_yaml['mqtt_broker']
+        self.mqtt_topic = config_yaml['mqtt_topic']
+        self.mqtt_client_id = config_yaml['mqtt_client_id']
+        self.mqtt_username = config_yaml['mqtt_username']
+        self.mqtt_password = config_yaml['mqtt_password']
+        self.mqtt_qos = config_yaml['mqtt_qos']
+        self.mqtt_retain = config_yaml['mqtt_retain']
+        self.mqtt_keepalive = config_yaml['mqtt_keepalive']
         self.timeout = 5.0
         self.debug = False
+        self.client = mqtt.Client(self.mqtt_client_id)
+        self.client.username_pw_set(self.mqtt_username, self.mqtt_password)
+        self.client.connect(self.mqtt_broker)
 
     def check_connection(self):
         ''' Return True if connection to the robot API server is successful '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return True
+        return self.client.is_connected()
 
     def localize(
         self,
@@ -127,6 +137,14 @@ class RobotAPI:
         return False
 
     def get_data(self, robot_name: str):
+        ''' Returns a RobotUpdateData for one robot if a name is given. Otherwise
+        return a list of RobotUpdateData for all robots. '''
+        logger.info(f"Getting data for robot: {robot_name}")
+        map = self.map(robot_name)
+        position = self.position(robot_name)
+        battery_soc = self.battery_soc(robot_name)
+        if not (map is None or position is None or battery_soc is None):
+            return RobotUpdateData(robot_name, map, position, battery_soc)
         fake_map = "L1"
 
         fake_position = [14.172792629383936, -0.41270799313022244, 0.0]

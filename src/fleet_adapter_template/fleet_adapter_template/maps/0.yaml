@@ -54,8 +54,8 @@ levels:
       - {name: ''}
     - - 14.192744059762092
       - -1.341119516436108
-      - {is_charger: true, name: tinyRobot1_charger}
+      - {is_charger: true, name: charge_1}
     - - 14.172792629383936
       - -0.41270799313022244
-      - {is_parking_spot: true, name: ''}
+      - {is_parking_spot: true, name: park_1}
 lifts: {}

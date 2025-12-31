@@ -14,12 +14,10 @@
 
 import sys
 import argparse
-from asyncio.log import logger
 import yaml
 import time
 import threading
 import asyncio
-import nudged
 
 import rclpy
 import rclpy.node
@@ -30,29 +28,11 @@ import rmf_adapter
 from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
 from rmf_adapter import Transformation
-
+import logging
 from .RobotClientAPI import RobotAPI
 
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(asctime)s %(message)s')
 
-# ------------------------------------------------------------------------------
-# Helper functions
-# ------------------------------------------------------------------------------
-def compute_transforms(level, coords, node=None):
-    """Get transforms between RMF and robot coordinates."""
-    rmf_coords = coords['rmf']
-    robot_coords = coords['robot']
-    tf = nudged.estimate(rmf_coords, robot_coords)
-    if node:
-        mse = nudged.estimate_error(tf, rmf_coords, robot_coords)
-        node.get_logger().info(
-            f"Transformation error estimate for {level}: {mse}"
-        )
-
-    return Transformation(
-        tf.get_rotation(),
-        tf.get_scale(),
-        tf.get_translation()
-    )
 
 # ------------------------------------------------------------------------------
 # Main
