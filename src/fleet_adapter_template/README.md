@@ -99,6 +99,20 @@ ros2 launch rmf_demos_fleet_adapter fleet_adapter.launch.xml config_file:=/rmf_d
 
 ros2 launch rmf_visualization visualization.launch.xml map_name:=L1 viz_config_file:=/rmf_demos_ws/install/rmf_demos/share/rmf_demos/include/hotel/hotel.rviz use_sim_time:=false
 
+# Neu chay dev mode, nen chay rieng le adapter
+
+cd /home/admin/ros2_ws/src
+
+source /opt/ros/jazzy/setup.bash
+source ~/ros2_ws/install/setup.bash
+
+export PYTHONPATH=/home/admin/ros2_ws/src/fleet_adapter_template:$PYTHONPATH
+
+python3 -m fleet_adapter_template.fleet_adapter_template.fleet_adapter \
+  --config_file fleet_adapter_template/fleet_adapter_template/config.yaml \
+  --nav_graph fleet_adapter_template/fleet_adapter_template/maps/0.yaml
+
+ros2 launch fleet_adapter_template demo.launch.xml
 
 ```
 

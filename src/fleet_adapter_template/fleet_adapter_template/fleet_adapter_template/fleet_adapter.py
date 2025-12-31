@@ -274,6 +274,7 @@ def update_robot(robot: RobotAdapter):
         )
         return
 
+    logging.info(f"Updating robot {robot.name} with state {state}")
     robot.update(state)
 
 

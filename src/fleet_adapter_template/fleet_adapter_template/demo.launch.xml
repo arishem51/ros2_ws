@@ -3,6 +3,8 @@
 <launch>
     <arg name="use_sim_time" default="false"
         description="Use the /clock topic for time to sync with simulation" />
+
+    <arg default="false" name="run_fleet_adapter" />
     <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_map_to_my_frame"
         output="screen"
         args="0 0 0 0 0 0 map my_frame" />
@@ -17,10 +19,11 @@
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 
-    <group>
+    <group if="$(var run_fleet_adapter)">
         <node pkg="fleet_adapter_template"
             exec="fleet_adapter"
-            args="--config_file $(find-pkg-share fleet_adapter_template)/config.yaml --nav_graph $(find-pkg-share fleet_adapter_template)/maps/0.yaml"
+            args="--config_file $(find-pkg-share fleet_adapter_template)/config.yaml --nav_graph
+    $(find-pkg-share fleet_adapter_template)/maps/0.yaml"
             output="both">
             <param name="use_sim_time" value="$(var use_sim_time)" />
         </node>
