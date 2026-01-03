@@ -132,6 +132,9 @@ levels:
     - - 18
       - 21
       - {is_bidirectional: false}
+    - - 7
+      - 4
+      - {is_bidirectional: false}
     vertices:
     - - 12.321385502772205
       - -0.41162853141200134

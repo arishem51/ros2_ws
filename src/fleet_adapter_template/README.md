@@ -67,6 +67,8 @@ ros2 run fleet_adapter_template fleet_adapter -c CONFIG_FILE -n NAV_GRAPH -s ws:
 
 colcon build --symlink-install
 
+source install/setup.bash
+
 # genera nav graph use this
 ros2 run rmf_building_map_tools building_map_generator nav \
     ~/ros2_ws/src/fleet_adapter_template/fleet_adapter_template/maps/demo.building.yaml \

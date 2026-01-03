@@ -33,6 +33,8 @@ from .RobotClientAPI import RobotAPI
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(asctime)s %(message)s')
 
+logger = logging.getLogger(__name__)
+
 
 # ------------------------------------------------------------------------------
 # Main
@@ -113,21 +115,17 @@ def main(argv=sys.argv):
 
     def update_loop():
         asyncio.set_event_loop(asyncio.new_event_loop())
+        next_wakeup = time.monotonic()
+        loop = asyncio.get_event_loop()
         while rclpy.ok():
-            now = node.get_clock().now()
-
-            # Update all the robots in parallel using a thread pool
-            update_jobs = []
-            for robot in robots.values():
-                update_jobs.append(update_robot(robot))
-
-            asyncio.get_event_loop().run_until_complete(
-                asyncio.wait(update_jobs)
-            )
-
-            next_wakeup = now + Duration(nanoseconds=update_period*1e9)
-            while node.get_clock().now() < next_wakeup:
-                time.sleep(0.001)
+            
+            jobs = [update_robot(r) for r in robots.values()]
+            loop.run_until_complete(asyncio.gather(*jobs))
+            next_wakeup += update_period
+            sleep_time = next_wakeup - time.monotonic()
+                        
+            if sleep_time > 0:
+                time.sleep(sleep_time)
 
     update_thread = threading.Thread(target=update_loop, args=())
     update_thread.start()
@@ -274,7 +272,6 @@ def update_robot(robot: RobotAdapter):
         )
         return
 
-    logging.info(f"Updating robot {robot.name} with state {state}")
     robot.update(state)
 
 
