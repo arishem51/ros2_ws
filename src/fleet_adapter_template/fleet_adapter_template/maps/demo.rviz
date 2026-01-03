@@ -63,8 +63,8 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        participant 4: true
-        participant location 4: true
+        participant 5: true
+        participant location 5: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -90,9 +90,9 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        tinyRobot/labels/L1: true
-        tinyRobot/lanes/L1: true
-        tinyRobot/waypoints/L1: true
+        AUBOT_AGV/labels/L1: true
+        AUBOT_AGV/lanes/L1: true
+        AUBOT_AGV/waypoints/L1: true
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -188,11 +188,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 45.32710266113281
+      Scale: 56.704505920410156
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
-      X: 12.610808372497559
-      Y: -5.328139305114746
+      X: 8.430928230285645
+      Y: -5.317032814025879
     Saved: ~
 Window Geometry:
   Displays:
@@ -212,5 +212,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1440
-  X: 168
-  Y: 208
+  X: 226
+  Y: 125
