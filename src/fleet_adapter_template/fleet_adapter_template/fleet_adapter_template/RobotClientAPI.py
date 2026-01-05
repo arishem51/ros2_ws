@@ -26,6 +26,8 @@ import json
 import logging
 from time import timezone
 import paho.mqtt.client as mqtt
+import yaml
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ class RobotAPI:
     # The constructor below accepts parameters typically required to submit
     # http requests. Users should modify the constructor as per the
     # requirements of their robot's API
-    def __init__(self, config_yaml):
+    def __init__(self, config_yaml, nav_graph_path):
         self.mqtt_broker = config_yaml['mqtt_broker']
         self.mqtt_topic = config_yaml['mqtt_topic']
         self.mqtt_client_id = config_yaml['mqtt_client_id']
@@ -47,43 +49,22 @@ class RobotAPI:
         self.debug = False
         self.robot_states = {}
         self.client = mqtt.Client(self.mqtt_client_id)
-
+        self.nav_graph_path = Path(nav_graph_path)
         self.client.on_message = self.on_message
         self.client.on_connect = self.on_connect
 
         self.client.username_pw_set(self.mqtt_username, self.mqtt_password)
         self.client.connect(self.mqtt_broker, keepalive=self.mqtt_keepalive)
         self.client.loop_start()
-        self.node_positions = {
-            "0189": [12.321385502772205, -0.41162853141200134, 0],
-            "0190": [12.333780701122814, -1.3245925853019644, 0],
-            "0191": [12.325517235555742, -2.254064958917136, 0],
-            "0467": [13.250876487796312, -2.2499332261336003, 0],
-            "0468": [13.250876487796312, -1.3328560508690361, 0],
-            "1011": [14.192744059762092, -1.341119516436108, 0],
-            "1012": [14.172792629383936, -0.41270799313022244, 0],
-            "0099": [13.245237230889053, -0.3999591780098525, 0],
-            "1010": [14.200318903198575, -2.264617627783194, 0],
-            "0192": [12.316509313631277, -3.1920055235976634, 0],
-            "0466": [13.247917273775672, -3.1920055235976634, 0],
-            "1104": [14.179306622511133, -3.206261862841756, 0],
-            "1103": [14.191925157768958, -4.1255910185874365, 0],
-            "0465": [13.249759803260222, -4.117681169790127, 0],
-            "0193": [12.315504297548793, -4.133519478793681, 0],
-            "0194": [12.315504297548793, -5.059846524298864, 0],
-            "0195": [12.325405567102132, -5.984721879907129, 0],
-            "0196": [12.308431962153552, -6.907494146305755, 0],
-            "0197": [12.308431962153552, -7.869871490917736, 0],
-            "0094": [12.319747698785939, -8.781309409275043, 0],
-            "0095": [13.231185617143245, -8.781309409275043, 0],
-            "0461": [13.259493570133145, -7.858555754285351, 0],
-            "0462": [13.24250135377563, -6.9301256195705285, 0],
-            "0463": [13.25370542195441, -5.990137799907169, 0],
-            "0464": [13.25370542195441, -5.059846524298864, 0],
-            "1102": [14.19588938787208, -5.0677749845051085, 0],
-            "1101": [14.19983500656627, -5.998066260113413, 0],
-            "1100": [14.187905093439031, -6.935802099295657, 0],
-        }
+        with open(nav_graph_path, 'r') as f:
+            graph_data = yaml.safe_load(f)
+            vertices = graph_data['levels']['L1']['vertices']
+            self.node_positions = {}
+            for idx, vertex in enumerate(vertices):
+                x,y, props = vertex
+                name = props.get('name', f'qr_{idx}').replace('qr_', '')
+                self.node_positions[name] = [x, y, 0]
+        logger.info(f"node_positions: {self.node_positions}")
 
     def check_connection(self):
         ''' Return True if connection to the robot API server is successful '''
@@ -114,47 +95,50 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False '''
-        node_id = "1104"
-        logger.info(f"Navigating to node: {node_id}")
-        order = {
-                    "headerId": 140,
-                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                    "version": "2.0.0",
-                    "manufacturer": "AUBOT",
-                    "serialNumber": "VAGV1",
-                    "orderId": "rtaaa-1103-to-0465",
-                    "orderUpdateId": 0,
-                    "nodes": [
-                        {
-                        "nodeId": "1103",
-                        "sequenceId": 0,
-                        "released": "true",
-                        "actions": []
-                        },
-                        {
-                        "nodeId": "0465",
-                        "sequenceId": 2,
-                        "released": "true",
-                        "actions": []
-                        }
-                    ],
-                    "edges": [
-                        {
-                            "edgeId": "11030465",
-                            "sequenceId": 1,
-                            "released": "true",
-                            "startNodeId": "1103",
-                            "endNodeId": "0465",
-                            "actions": [],
-                            "maxSpeed": -12.0,
-                            "direction": "Y+"
-                        }
-                    ]
-                }
-        topic = f"{self.mqtt_topic}/{robot_name}/order"
+        logger.info(f"Navigating to pose: {pose}")
+        # node_id = "1104"
+        # logger.info(f"Navigating to node: {node_id}")
+        # order = {
+        #             "headerId": 140,
+        #             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        #             "version": "2.0.0",
+        #             "manufacturer": "AUBOT",
+        #             "serialNumber": "VAGV1",
+        #             "orderId": "rtaaa-1103-to-0465",
+        #             "orderUpdateId": 0,
+        #             "nodes": [
+        #                 {
+        #                 "nodeId": "1103",
+        #                 "sequenceId": 0,
+        #                 "released": "true",
+        #                 "actions": []
+        #                 },
+        #                 {
+        #                 "nodeId": "0465",
+        #                 "sequenceId": 2,
+        #                 "released": "true",
+        #                 "actions": []
+        #                 }
+        #             ],
+        #             "edges": [
+        #                 {
+        #                     "edgeId": "11030465",
+        #                     "sequenceId": 1,
+        #                     "released": "true",
+        #                     "startNodeId": "1103",
+        #                     "endNodeId": "0465",
+        #                     "actions": [],
+        #                     "maxSpeed": -12.0,
+        #                     "direction": "Y+"
+        #                 }
+        #             ]
+        #         }
+        # topic = f"{self.mqtt_topic}/{robot_name}/order"
+
+        # tao order o day
         try:
-            self.client.publish(topic, json.dumps(order))
-            logger.info(f"Published order: {order}")
+            # self.client.publish(topic, json.dumps(order))
+            # logger.info(f"Published order: {order}")
             return True
         except Exception as e:
             logger.error(f"Failed to publish order: {e}")

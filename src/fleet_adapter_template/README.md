@@ -88,7 +88,7 @@ ros2 run fleet_adapter_template fleet_adapter  -c ~/ros2_ws/src/fleet_adapter_te
 # run visualization
 ros2 launch rmf_visualization visualization.launch.xml  map_name:=demo  viz_config_file:=~/ros2_ws/src/fleet_adapter_template/fleet_adapter_template/maps/demo.rviz
 
-# Same bur for demo
+# Same but for demo
 
 ros2 run rmf_traffic_ros2 rmf_traffic_schedule --ros-args -p use_sim_time:=false
 

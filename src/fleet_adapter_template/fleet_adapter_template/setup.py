@@ -27,7 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'fleet_adapter=fleet_adapter_template.fleet_adapter:main',
-            'fake_robot=fleet_adapter_template.fake_robot:main',
+            'dispatch_go_to_place=fleet_adapter_template.tasks.dispatch_go_to_place:main',
         ],
     },
 )

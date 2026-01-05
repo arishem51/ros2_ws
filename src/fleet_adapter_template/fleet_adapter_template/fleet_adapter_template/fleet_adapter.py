@@ -22,12 +22,10 @@ import asyncio
 import rclpy
 import rclpy.node
 from rclpy.parameter import Parameter
-from rclpy.duration import Duration
 
 import rmf_adapter
 from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
-from rmf_adapter import Transformation
 import logging
 from .RobotClientAPI import RobotAPI
 
@@ -100,7 +98,7 @@ def main(argv=sys.argv):
 
     # Initialize robot API for this fleet
     fleet_mgr_yaml = config_yaml['fleet_manager']
-    api = RobotAPI(fleet_mgr_yaml)
+    api = RobotAPI(fleet_mgr_yaml, nav_graph_path)
 
     robots = {}
     for robot_name in fleet_config.known_robots:
