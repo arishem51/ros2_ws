@@ -21,8 +21,10 @@
     these functions.
 '''
 
+import datetime
 import json
 import logging
+from time import timezone
 import paho.mqtt.client as mqtt
 
 logger = logging.getLogger(__name__)
@@ -112,10 +114,104 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return False
+        node_id = "1104"
+        logger.info(f"Navigating to node: {node_id}")
+        order = {
+                    "headerId": 140,
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "version": "2.0.0",
+                    "manufacturer": "AUBOT",
+                    "serialNumber": "VAGV1",
+                    "orderId": "rtaaa-1103-to-0465",
+                    "orderUpdateId": 0,
+                    "nodes": [
+                        {
+                        "nodeId": "1103",
+                        "sequenceId": 0,
+                        "released": "true",
+                        "actions": []
+                        },
+                        {
+                        "nodeId": "0465",
+                        "sequenceId": 2,
+                        "released": "true",
+                        "actions": []
+                        }
+                    ],
+                    "edges": [
+                        {
+                            "edgeId": "11030465",
+                            "sequenceId": 1,
+                            "released": "true",
+                            "startNodeId": "1103",
+                            "endNodeId": "0465",
+                            "actions": [],
+                            "maxSpeed": -12.0,
+                            "direction": "Y+"
+                        }
+                    ]
+                }
+        topic = f"{self.mqtt_topic}/{robot_name}/order"
+        try:
+            self.client.publish(topic, json.dumps(order))
+            logger.info(f"Published order: {order}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to publish order: {e}")
+            return False
+    def navigate2(
+        self,
+        header_id: int,
+    ):
+        ''' Request the robot to navigate to pose:[x,y,theta] where x, y and
+            and theta are in the robot's coordinate convention. This function
+            should return True if the robot has accepted the request,
+            else False '''
+        node_id = "1104"
+        logger.info(f"Navigating to node: {node_id}")
+        order = {
+                    "headerId": header_id,
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "version": "2.0.0",
+                    "manufacturer": "AUBOT",
+                    "serialNumber": "VAGV1",
+                    "orderId": f"{header_id}-1103-to-0465",
+                    "orderUpdateId": 0,
+                    "nodes": [
+                        {
+                        "nodeId": "1103",
+                        "sequenceId": 0,
+                        "released": "true",
+                        "actions": []
+                        },
+                        {
+                        "nodeId": "0465",
+                        "sequenceId": 2,
+                        "released": "true",
+                        "actions": []
+                        }
+                    ],
+                    "edges": [
+                        {
+                            "edgeId": "11030465",
+                            "sequenceId": 1,
+                            "released": "true",
+                            "startNodeId": "1103",
+                            "endNodeId": "0465",
+                            "actions": [],
+                            "maxSpeed": -12.0,
+                            "direction": "Y+"
+                        }
+                    ]
+                }
+        topic = f"{self.mqtt_topic}/VAGV1/order"
+        try:
+            self.client.publish(topic, json.dumps(order))
+            logger.info(f"Published order: {order}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to publish order: {e}")
+            return False
 
     def start_activity(
         self,
@@ -174,7 +270,9 @@ class RobotAPI:
     
     def on_message(self, client, userdata, message):
         payload = json.loads(message.payload.decode())
-        robot_name = payload['serialNumber']
+        robot_name = "serialNumber" in payload and payload['serialNumber'] or None
+        if robot_name is None:
+            return
         if "batteryState" in payload:
             battery_soc = payload["batteryState"]["batteryCharge"]
             self.robot_states[robot_name] = {
