@@ -116,6 +116,8 @@ python3 -m fleet_adapter_template.fleet_adapter_template.fleet_adapter \
 
 ros2 launch fleet_adapter_template demo.launch.xml
 
+ros2 run fleet_adapter_template dispatch_go_to_place --fleet AUBOT_AGV --robot VAGV1 --place qr_0465
+
 ```
 
 
