@@ -22,3 +22,22 @@
         ```
         ros2 launch rmf_demos_gz office.launch.xml
         ```
+
+# Demo
+In one terminal, run:
+```bash
+ros2 launch fleet_adapter_template demo.launch.xml
+```
+
+In a new terminal, run:
+```bash
+python3 -m fleet_adapter_template.fleet_adapter \
+    --config_file /home/admin/ros2_ws/build/fleet_adapter_template/config.yaml \
+    --nav_graph /home/admin/ros2_ws/build/fleet_adapter_template/maps/0.yaml
+```
+
+To send command to the RMF core, run:
+```bash
+# Go to a predefined point on the map
+ros2 run fleet_adapter_template dispatch_go_to_place --fleet AUBOT_AGV --robot VAGV1 --place qr_0465
+```
