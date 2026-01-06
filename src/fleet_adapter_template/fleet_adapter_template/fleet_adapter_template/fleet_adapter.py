@@ -78,12 +78,6 @@ def main(argv=sys.argv):
         'Please ensure RMF Schedule Node is running'
     )
 
-    # Enable sim time for testing offline
-    if args.use_sim_time:
-        param = Parameter("use_sim_time", Parameter.Type.BOOL, True)
-        node.set_parameters([param])
-        adapter.node.use_sim_time()
-
     adapter.start()
     time.sleep(1.0)
 
@@ -162,7 +156,7 @@ class RobotAdapter:
         activity_identifier = None
         execution = self.execution
         if execution:
-            if self.api.is_command_completed():
+            if self.api.is_command_completed(self.name):
                 execution.finished()
                 self.execution = None
             else:
