@@ -21,11 +21,13 @@
     these functions.
 '''
 
-import datetime
 import json
 import logging
-from time import timezone
+import math
 import paho.mqtt.client as mqtt
+import yaml
+from pathlib import Path
+from .vda5050_mapper import Vda5050Mapper
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ class RobotAPI:
     # The constructor below accepts parameters typically required to submit
     # http requests. Users should modify the constructor as per the
     # requirements of their robot's API
-    def __init__(self, config_yaml):
+    def __init__(self, config_yaml, nav_graph_path):
         self.mqtt_broker = config_yaml['mqtt_broker']
         self.mqtt_topic = config_yaml['mqtt_topic']
         self.mqtt_client_id = config_yaml['mqtt_client_id']
@@ -47,43 +49,22 @@ class RobotAPI:
         self.debug = False
         self.robot_states = {}
         self.client = mqtt.Client(self.mqtt_client_id)
-
+        self.nav_graph_path = Path(nav_graph_path)
         self.client.on_message = self.on_message
         self.client.on_connect = self.on_connect
-
         self.client.username_pw_set(self.mqtt_username, self.mqtt_password)
         self.client.connect(self.mqtt_broker, keepalive=self.mqtt_keepalive)
         self.client.loop_start()
-        self.node_positions = {
-            "0189": [12.321385502772205, -0.41162853141200134, 0],
-            "0190": [12.333780701122814, -1.3245925853019644, 0],
-            "0191": [12.325517235555742, -2.254064958917136, 0],
-            "0467": [13.250876487796312, -2.2499332261336003, 0],
-            "0468": [13.250876487796312, -1.3328560508690361, 0],
-            "1011": [14.192744059762092, -1.341119516436108, 0],
-            "1012": [14.172792629383936, -0.41270799313022244, 0],
-            "0099": [13.245237230889053, -0.3999591780098525, 0],
-            "1010": [14.200318903198575, -2.264617627783194, 0],
-            "0192": [12.316509313631277, -3.1920055235976634, 0],
-            "0466": [13.247917273775672, -3.1920055235976634, 0],
-            "1104": [14.179306622511133, -3.206261862841756, 0],
-            "1103": [14.191925157768958, -4.1255910185874365, 0],
-            "0465": [13.249759803260222, -4.117681169790127, 0],
-            "0193": [12.315504297548793, -4.133519478793681, 0],
-            "0194": [12.315504297548793, -5.059846524298864, 0],
-            "0195": [12.325405567102132, -5.984721879907129, 0],
-            "0196": [12.308431962153552, -6.907494146305755, 0],
-            "0197": [12.308431962153552, -7.869871490917736, 0],
-            "0094": [12.319747698785939, -8.781309409275043, 0],
-            "0095": [13.231185617143245, -8.781309409275043, 0],
-            "0461": [13.259493570133145, -7.858555754285351, 0],
-            "0462": [13.24250135377563, -6.9301256195705285, 0],
-            "0463": [13.25370542195441, -5.990137799907169, 0],
-            "0464": [13.25370542195441, -5.059846524298864, 0],
-            "1102": [14.19588938787208, -5.0677749845051085, 0],
-            "1101": [14.19983500656627, -5.998066260113413, 0],
-            "1100": [14.187905093439031, -6.935802099295657, 0],
-        }
+        self.robot_orders = {}
+        self.nodes = {}
+        with open(nav_graph_path, 'r') as f:
+            graph_data = yaml.safe_load(f)
+            vertices = graph_data['levels']['L1']['vertices']
+            for idx, vertex in enumerate(vertices):
+                x,y, props = vertex
+                name = props.get('name', f'qr_{idx}').replace('qr_', '')
+                self.nodes[name] = {"x": x, "y": y, "props": {**props, "name": name}}
+        self.vda5050_mapper = Vda5050Mapper()
 
     def check_connection(self):
         ''' Return True if connection to the robot API server is successful '''
@@ -102,6 +83,16 @@ class RobotAPI:
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return False
+    def position_to_node_id(self, position):
+        next_node = None
+        min_dist = float('inf')
+        for _, node in self.nodes.items():
+            x, y = node["x"], node["y"]
+            dist = math.hypot(x - position[0], y - position[1])
+            if next_node is None or dist < min_dist:
+                next_node = node
+                min_dist = dist
+        return next_node
     
     def navigate(
         self,
@@ -114,105 +105,26 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False '''
-        node_id = "1104"
-        logger.info(f"Navigating to node: {node_id}")
-        order = {
-                    "headerId": 140,
-                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                    "version": "2.0.0",
-                    "manufacturer": "AUBOT",
-                    "serialNumber": "VAGV1",
-                    "orderId": "rtaaa-1103-to-0465",
-                    "orderUpdateId": 0,
-                    "nodes": [
-                        {
-                        "nodeId": "1103",
-                        "sequenceId": 0,
-                        "released": "true",
-                        "actions": []
-                        },
-                        {
-                        "nodeId": "0465",
-                        "sequenceId": 2,
-                        "released": "true",
-                        "actions": []
-                        }
-                    ],
-                    "edges": [
-                        {
-                            "edgeId": "11030465",
-                            "sequenceId": 1,
-                            "released": "true",
-                            "startNodeId": "1103",
-                            "endNodeId": "0465",
-                            "actions": [],
-                            "maxSpeed": -12.0,
-                            "direction": "Y+"
-                        }
-                    ]
-                }
+        logger.info(f"Navigating to pose: {pose}")
+        current_node = self.position_to_node_id(self.position(robot_name))
+        next_node = self.position_to_node_id(pose)
+        order = self.vda5050_mapper.map_order(current_node, next_node)
+        if order is None:
+            logger.error(f"No order found for current node: {current_node['props']['name']} and next node: {next_node['props']['name']}")
+            return False
+        if current_node["props"]["name"] == next_node["props"]["name"]:
+            logger.info(f"Current node and next node are the same: {current_node['props']['name']}")
+            return True
         topic = f"{self.mqtt_topic}/{robot_name}/order"
         try:
             self.client.publish(topic, json.dumps(order))
+            self.robot_orders[robot_name] = order
             logger.info(f"Published order: {order}")
             return True
         except Exception as e:
             logger.error(f"Failed to publish order: {e}")
             return False
-    def navigate2(
-        self,
-        header_id: int,
-    ):
-        ''' Request the robot to navigate to pose:[x,y,theta] where x, y and
-            and theta are in the robot's coordinate convention. This function
-            should return True if the robot has accepted the request,
-            else False '''
-        node_id = "1104"
-        logger.info(f"Navigating to node: {node_id}")
-        order = {
-                    "headerId": header_id,
-                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                    "version": "2.0.0",
-                    "manufacturer": "AUBOT",
-                    "serialNumber": "VAGV1",
-                    "orderId": f"{header_id}-1103-to-0465",
-                    "orderUpdateId": 0,
-                    "nodes": [
-                        {
-                        "nodeId": "1103",
-                        "sequenceId": 0,
-                        "released": "true",
-                        "actions": []
-                        },
-                        {
-                        "nodeId": "0465",
-                        "sequenceId": 2,
-                        "released": "true",
-                        "actions": []
-                        }
-                    ],
-                    "edges": [
-                        {
-                            "edgeId": "11030465",
-                            "sequenceId": 1,
-                            "released": "true",
-                            "startNodeId": "1103",
-                            "endNodeId": "0465",
-                            "actions": [],
-                            "maxSpeed": -12.0,
-                            "direction": "Y+"
-                        }
-                    ]
-                }
-        topic = f"{self.mqtt_topic}/VAGV1/order"
-        try:
-            self.client.publish(topic, json.dumps(order))
-            logger.info(f"Published order: {order}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to publish order: {e}")
-            return False
-
+    
     def start_activity(
         self,
         robot_name: str,
@@ -241,36 +153,38 @@ class RobotAPI:
         if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
             return None
         last_node_id = self.robot_states[robot_name]["last_node_id"]
-        if(last_node_id in self.node_positions):
-            return self.node_positions[last_node_id]
+        if(last_node_id in self.nodes):
+            node = self.nodes[last_node_id]
+            return [node["x"], node["y"], 0]
         return None
 
     def battery_soc(self, robot_name: str):
         if robot_name not in self.robot_states or "battery_soc" not in self.robot_states[robot_name]:
-            return None
+            return 1.0
         return self.robot_states[robot_name]["battery_soc"] / 100.0
 
     def map(self, robot_name: str):
         return "L1"
 
-    def is_command_completed(self):
+    def is_command_completed(self, robot_name: str):
         ''' Return True if the robot has completed its last command, else
         return False. '''
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
+        if robot_name in self.robot_orders:
+            cur_order = self.robot_orders[robot_name]
+            if cur_order["nodes"][1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
+                logger.info(f"Order completed: {cur_order}")
+                return True
         return False
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            logger.info("MQTT connected successfully")
             self.client.subscribe("aubotagv/2.0.0/AUBOT/#")
         else:
             logger.error(f"MQTT connection failed: {rc}")
     
     def on_message(self, client, userdata, message):
         payload = json.loads(message.payload.decode())
-        robot_name = "serialNumber" in payload and payload['serialNumber'] or None
+        robot_name = payload["serialNumber"] if payload and "serialNumber" in payload else None
         if robot_name is None:
             return
         if "batteryState" in payload:
@@ -292,7 +206,7 @@ class RobotAPI:
         position = self.position(robot_name)
         battery_soc = self.battery_soc(robot_name)
         if not (map is None or position is None or battery_soc is None):
-            return RobotUpdateData(robot_name, map, position, battery_soc)
+            return RobotUpdateData(robot_name, map, position, 1.0)
         return None
 
 class RobotUpdateData:

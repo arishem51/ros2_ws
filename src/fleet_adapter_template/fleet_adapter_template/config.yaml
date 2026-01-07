@@ -9,7 +9,7 @@ rmf_fleet:
   profile: # Robot profile is modelled as a circle
     footprint: 0.15 # radius in m
     vicinity: 0.25 # radius in m
-  reversible: True # whether robots in this fleet can reverse
+  reversible: False # whether robots in this fleet can reverse
   battery_system:
     voltage: 12.0 # V
     capacity: 24.0 # Ahr
@@ -23,19 +23,18 @@ rmf_fleet:
   tool_system:
     power: 0.0 # W
   recharge_threshold: 0.10 # Battery level below which robots in this fleet will not operate
-  recharge_soc: 1.0 # Battery level to which robots in this fleet should be charged up to during recharging tasks
+  recharge_soc: 0.98 # Battery level to which robots in this fleet should be charged up to during recharging tasks
   publish_fleet_state: 10.0 # Publish frequency for fleet state, ensure that it is same as robot_state_update_frequency
-  account_for_battery_drain: True
+  account_for_battery_drain: False
   task_capabilities: # Specify the types of RMF Tasks that robots in this fleet are capable of performing
     loop: True
     delivery: True
-  actions: ["some_action_here"]
-  finishing_request: "park" # [park, charge, nothing]
+  actions: []
+  finishing_request: "nothing" # [park, charge, nothing]
   responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
   robots:
     VAGV1:
-        responsive_wait: False
-
+      responsive_wait: True
   robot_state_update_frequency: 10.0 # Hz
 
 fleet_manager:

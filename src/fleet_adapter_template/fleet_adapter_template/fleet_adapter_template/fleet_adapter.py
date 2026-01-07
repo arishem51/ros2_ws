@@ -22,12 +22,10 @@ import asyncio
 import rclpy
 import rclpy.node
 from rclpy.parameter import Parameter
-from rclpy.duration import Duration
 
 import rmf_adapter
 from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
-from rmf_adapter import Transformation
 import logging
 from .RobotClientAPI import RobotAPI
 
@@ -80,12 +78,6 @@ def main(argv=sys.argv):
         'Please ensure RMF Schedule Node is running'
     )
 
-    # Enable sim time for testing offline
-    if args.use_sim_time:
-        param = Parameter("use_sim_time", Parameter.Type.BOOL, True)
-        node.set_parameters([param])
-        adapter.node.use_sim_time()
-
     adapter.start()
     time.sleep(1.0)
 
@@ -100,7 +92,7 @@ def main(argv=sys.argv):
 
     # Initialize robot API for this fleet
     fleet_mgr_yaml = config_yaml['fleet_manager']
-    api = RobotAPI(fleet_mgr_yaml)
+    api = RobotAPI(fleet_mgr_yaml, nav_graph_path)
 
     robots = {}
     for robot_name in fleet_config.known_robots:
@@ -164,7 +156,7 @@ class RobotAdapter:
         activity_identifier = None
         execution = self.execution
         if execution:
-            if self.api.is_command_completed():
+            if self.api.is_command_completed(self.name):
                 execution.finished()
                 self.execution = None
             else:
