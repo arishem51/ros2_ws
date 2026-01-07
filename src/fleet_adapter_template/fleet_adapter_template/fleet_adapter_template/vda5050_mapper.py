@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 class Vda5050Mapper:
     def __init__(self):
         pass
-    def map_order(self, current_node, next_node):
+    def create_order(self, current_node, next_node):
         if current_node is None or next_node is None:
             return None
         next_node_props = next_node["props"]

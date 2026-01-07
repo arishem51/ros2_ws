@@ -108,12 +108,11 @@ class RobotAPI:
         logger.info(f"Navigating to pose: {pose}")
         current_node = self.position_to_node_id(self.position(robot_name))
         next_node = self.position_to_node_id(pose)
-        order = self.vda5050_mapper.map_order(current_node, next_node)
+        order = self.vda5050_mapper.create_order(current_node, next_node)
         if order is None:
             logger.error(f"No order found for current node: {current_node['props']['name']} and next node: {next_node['props']['name']}")
             return False
         if current_node["props"]["name"] == next_node["props"]["name"]:
-            logger.info(f"Current node and next node are the same: {current_node['props']['name']}")
             return True
         topic = f"{self.mqtt_topic}/{robot_name}/order"
         try:
@@ -167,12 +166,9 @@ class RobotAPI:
         return "L1"
 
     def is_command_completed(self, robot_name: str):
-        ''' Return True if the robot has completed its last command, else
-        return False. '''
         if robot_name in self.robot_orders:
             cur_order = self.robot_orders[robot_name]
             if cur_order["nodes"][1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
-                logger.info(f"Order completed: {cur_order}")
                 return True
         return False
 
