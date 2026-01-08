@@ -1,3 +1,4 @@
+from collections import defaultdict, deque
 import logging
 import math
 import uuid
@@ -28,29 +29,53 @@ class Vda5050Mapper:
                 "maxSpeed" : 12 * (-1 if is_backward else 1),
                 "direction" : direction
         }
-    def create_order(self, current_node, next_node):
+    def _expand_path(self, start, goal, graph: defaultdict[str, list[str]]):
+        queue = deque([[start]])
+        visited = set([start])
+        while queue:
+            path = queue.popleft()
+            current = path[-1]
+            if current == goal:
+                return path
+            for neighbor in graph[current]:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(path + [neighbor])
+        return None
+    
+    def create_order(self, current_node, next_node, graph: defaultdict[str, list[str]], graphNodes: dict[str, dict]):
         if current_node is None or next_node is None:
             return None
         next_node_props = next_node["props"]
         current_node_name = current_node["props"]["name"]
         next_node_name = next_node_props["name"]
+
+        path = self._expand_path(current_node_name, next_node_name, graph)
+
+        logger.info(f"Path: {path}")
+
+        if path is None:
+            return None
+
+        nodes = []
+        edges = []
+        for i in range(len(path)):
+            nodes.append({
+                "nodeId": path[i],
+                "sequenceId": i * 2,
+                "released": True,
+                "actions": []
+            })
+            if i + 1 < len(path):
+                edges.append(self._create_edge(graphNodes[path[i]], graphNodes[path[i + 1]], i * 2 + 1))
+        
         order = {
             "version": "2.0.0",
             "manufacturer": "AUBOT",
             "serialNumber": "VAGV1",
             "orderId": str(uuid.uuid4()),
             "orderUpdateId": 0,
-            "nodes": [{
-                "nodeId": current_node_name,
-                "sequenceId": 0,
-                "released": True,
-                "actions": []
-            }, {
-                "nodeId": next_node_name,
-                "sequenceId": 2,
-                "released": True,
-                "actions": []
-            }],
-            "edges": [self._create_edge(current_node, next_node, 1)]
+            "nodes": nodes,
+            "edges": edges
         }
         return order

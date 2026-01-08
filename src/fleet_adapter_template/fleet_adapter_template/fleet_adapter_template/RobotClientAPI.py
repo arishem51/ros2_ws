@@ -21,6 +21,7 @@
     these functions.
 '''
 
+from collections import defaultdict
 import json
 import logging
 import math
@@ -57,9 +58,15 @@ class RobotAPI:
         self.client.loop_start()
         self.robot_orders = {}
         self.nodes = {}
+        self.graph = defaultdict[str, list[str]](list)
         with open(nav_graph_path, 'r') as f:
             graph_data = yaml.safe_load(f)
             vertices = graph_data['levels']['L1']['vertices']
+            lanes = graph_data['levels']['L1']['lanes']
+            for lane in lanes:
+                u = vertices[lane[0]][2].get("name", f'qr_{lane[0]}').replace('qr_', '')
+                v = vertices[lane[1]][2].get("name", f'qr_{lane[1]}').replace('qr_', '')
+                self.graph[u].append(v)
             for idx, vertex in enumerate(vertices):
                 x,y, props = vertex
                 name = props.get('name', f'qr_{idx}').replace('qr_', '')
@@ -107,11 +114,12 @@ class RobotAPI:
         current_node = self.position_to_node_id(self.position(robot_name))
         next_node = self.position_to_node_id(pose)
         logger.info(f"Navigating to pose: {pose} {current_node['props']['name']} {next_node['props']['name']}")
-        order = self.vda5050_mapper.create_order(current_node, next_node)
+        order = self.vda5050_mapper.create_order(current_node, next_node, self.graph, self.nodes)
+        logger.info(f"Order: {order}")
         if order is None:
             logger.error(f"No order found for current node: {current_node['props']['name']} and next node: {next_node['props']['name']}")
             return False
-        if current_node["props"]["name"] == next_node["props"]["name"]:
+        if (current_node["props"]["name"] == next_node["props"]["name"] ) or len(order["nodes"]) == 1:
             return True
         topic = f"{self.mqtt_topic}/{robot_name}/order"
         try:
@@ -150,9 +158,9 @@ class RobotAPI:
         return props.get('is_parking_spot', False) or props.get('is_charger', False)
 
     def _get_orientation(self, robot_name: str):
-        if robot_name in self.robot_orders:
+        if robot_name in self.robot_orders and len(self.robot_orders[robot_name]["nodes"]) > 1:
             order = self.robot_orders[robot_name]
-            [cur_node_order, next_node_order] = order["nodes"]
+            [cur_node_order, next_node_order] = order["nodes"][:2]
             if cur_node_order["nodeId"] == next_node_order["nodeId"]:
                 return 0
             cur_node = self.nodes[cur_node_order["nodeId"]]
@@ -190,7 +198,7 @@ class RobotAPI:
     def is_command_completed(self, robot_name: str):
         if robot_name in self.robot_orders:
             cur_order = self.robot_orders[robot_name]
-            if cur_order["nodes"][1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
+            if cur_order["nodes"][-1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
                 return True
         return False
 
