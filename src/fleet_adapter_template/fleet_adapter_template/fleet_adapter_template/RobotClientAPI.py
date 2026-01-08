@@ -114,10 +114,9 @@ class RobotAPI:
         current_node = self.position_to_node_id(self.position(robot_name))
         next_node = self.position_to_node_id(pose)
         logger.info(f"Navigating to pose: {pose} {current_node['props']['name']} {next_node['props']['name']}")
-        order = self.vda5050_mapper.create_order(current_node, next_node, self.graph, self.nodes)
+        order = self.vda5050_mapper.create_order(robot_name, current_node, next_node, self.graph, self.nodes)
         logger.info(f"Order: {order}")
         if order is None:
-            logger.error(f"No order found for current node: {current_node['props']['name']} and next node: {next_node['props']['name']}")
             return False
         if (current_node["props"]["name"] == next_node["props"]["name"] ) or len(order["nodes"]) == 1:
             return True
@@ -197,8 +196,14 @@ class RobotAPI:
 
     def is_command_completed(self, robot_name: str):
         if robot_name in self.robot_orders:
+            # Check if robot_states has the required data
+            if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
+                return False
+            
             cur_order = self.robot_orders[robot_name]
             if cur_order["nodes"][-1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
+                # Order completed - clean up to prevent memory leak
+                del self.robot_orders[robot_name]
                 return True
         return False
 

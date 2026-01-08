@@ -35,12 +35,14 @@ rmf_fleet:
   robots:
     VAGV1:
       responsive_wait: True
+    VAGV2:
+      responsive_wait: True
   robot_state_update_frequency: 10.0 # Hz
 
 fleet_manager:
   mqtt_broker: "localhost"
   mqtt_topic: "aubotagv/2.0.0/AUBOT"
-  mqtt_client_id: "ROS2_VAGV1"
+  mqtt_client_id: "ROS2_VAGV"
   mqtt_username: "fms"
   mqtt_password: "Aubot@2025"
   mqtt_qos: 0

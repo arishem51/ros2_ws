@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
             'fleet_adapter=fleet_adapter_template.fleet_adapter:main',
             'dispatch_go_to_place=fleet_adapter_template.tasks.dispatch_go_to_place:main',
+            'cancel_task=fleet_adapter_template.tasks.cancel_task:main',
         ],
     },
 )

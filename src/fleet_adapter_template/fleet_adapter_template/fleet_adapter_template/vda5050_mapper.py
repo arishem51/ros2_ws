@@ -43,7 +43,7 @@ class Vda5050Mapper:
                     queue.append(path + [neighbor])
         return None
     
-    def create_order(self, current_node, next_node, graph: defaultdict[str, list[str]], graphNodes: dict[str, dict]):
+    def create_order(self, robot_name: str, current_node, next_node, graph: defaultdict[str, list[str]], graphNodes: dict[str, dict]):
         if current_node is None or next_node is None:
             return None
         next_node_props = next_node["props"]
@@ -72,7 +72,7 @@ class Vda5050Mapper:
         order = {
             "version": "2.0.0",
             "manufacturer": "AUBOT",
-            "serialNumber": "VAGV1",
+            "serialNumber": robot_name,
             "orderId": str(uuid.uuid4()),
             "orderUpdateId": 0,
             "nodes": nodes,
