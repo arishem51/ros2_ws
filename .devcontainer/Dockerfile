@@ -45,7 +45,6 @@ WORKDIR /home/$USERNAME/ros2_ws
 # Copy configuration files
 RUN echo 'source /opt/ros/'$ROS_DISTRO'/setup.bash' >> /home/$USERNAME/.bashrc \
     && echo 'source /rmf_demos_ws/install/setup.bash' >> /home/$USERNAME/.bashrc \
-    && echo 'cd /home/'$USERNAME'/ros2_ws && colcon build --symlink-install' >> /home/$USERNAME/.bashrc
-# && echo 'source /home/'$USERNAME'/ros2_ws/install/setup.bash' >> /home/$USERNAME/.bashrc
+    && echo 'if [ -f /home/'$USERNAME'/ros2_ws/install/setup.bash ]; then source /home/'$USERNAME'/ros2_ws/install/setup.bash; fi' >> /home/$USERNAME/.bashrc
 
 CMD ["bash"]
