@@ -40,11 +40,16 @@ USER $USERNAME
 
 # Create workspace so that user own this directory
 RUN mkdir -p /home/$USERNAME/ros2_ws/src
+RUN mkdir -p /home/$USERNAME/ros2_ws/log
 WORKDIR /home/$USERNAME/ros2_ws
+
+ENV PYTHONPATH=$PYTHONPATH'/home/'$USERNAME'/ros2_ws/src/fleet_adapter_template/fleet_adapter_template:'
+
+RUN sudo colcon build --symlink-install
 
 # Copy configuration files
 RUN echo 'source /opt/ros/'$ROS_DISTRO'/setup.bash' >> /home/$USERNAME/.bashrc \
-    && echo 'source /rmf_demos_ws/install/setup.bash' >> /home/$USERNAME/.bashrc
-    # && echo 'source /home/'$USERNAME'/ros2_ws/install/setup.bash' >> /home/$USERNAME/.bashrc
+    && echo 'source /rmf_demos_ws/install/setup.bash' >> /home/$USERNAME/.bashrc \
+    && echo 'source /home/'$USERNAME'/ros2_ws/install/setup.bash' >> /home/$USERNAME/.bashrc
 
 CMD ["bash"]
