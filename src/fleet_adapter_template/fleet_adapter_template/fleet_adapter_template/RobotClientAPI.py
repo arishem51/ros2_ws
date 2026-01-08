@@ -67,7 +67,6 @@ class RobotAPI:
         self.vda5050_mapper = Vda5050Mapper()
 
     def check_connection(self):
-        ''' Return True if connection to the robot API server is successful '''
         return self.client.is_connected()
 
     def localize(
@@ -105,9 +104,9 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False '''
-        logger.info(f"Navigating to pose: {pose}")
         current_node = self.position_to_node_id(self.position(robot_name))
         next_node = self.position_to_node_id(pose)
+        logger.info(f"Navigating to pose: {pose} {current_node['props']['name']} {next_node['props']['name']}")
         order = self.vda5050_mapper.create_order(current_node, next_node)
         if order is None:
             logger.error(f"No order found for current node: {current_node['props']['name']} and next node: {next_node['props']['name']}")
@@ -118,7 +117,6 @@ class RobotAPI:
         try:
             self.client.publish(topic, json.dumps(order))
             self.robot_orders[robot_name] = order
-            logger.info(f"Published order: {order}")
             return True
         except Exception as e:
             logger.error(f"Failed to publish order: {e}")
@@ -147,6 +145,30 @@ class RobotAPI:
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return False
+    def _is_reversed_target(self, node):
+        props = node.get("props", {})
+        return props.get('is_parking_spot', False) or props.get('is_charger', False)
+
+    def _get_orientation(self, robot_name: str):
+        if robot_name in self.robot_orders:
+            order = self.robot_orders[robot_name]
+            [cur_node_order, next_node_order] = order["nodes"]
+            if cur_node_order["nodeId"] == next_node_order["nodeId"]:
+                return 0
+            cur_node = self.nodes[cur_node_order["nodeId"]]
+            next_node = self.nodes[next_node_order["nodeId"]]
+            dx = next_node["x"] - cur_node["x"]
+            dy = next_node["y"] - cur_node["y"]
+            yaw = math.atan2(dy, dx)
+            reverse = self._is_reversed_target(next_node)
+            if reverse:
+                yaw += math.pi
+            return (yaw + math.pi) % (2 * math.pi) - math.pi
+        cur_node = self.nodes[self.robot_states[robot_name]["last_node_id"]]
+        if self._is_reversed_target(cur_node):
+            return math.pi
+        return 0
+        
 
     def position(self, robot_name: str):
         if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
@@ -154,7 +176,7 @@ class RobotAPI:
         last_node_id = self.robot_states[robot_name]["last_node_id"]
         if(last_node_id in self.nodes):
             node = self.nodes[last_node_id]
-            return [node["x"], node["y"], 0]
+            return [node["x"], node["y"], self._get_orientation(robot_name)]
         return None
 
     def battery_soc(self, robot_name: str):
