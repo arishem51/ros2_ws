@@ -19,16 +19,16 @@ RUN apt update -q \
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        bash-completion \
-        curl \
-        gdb \
-        git \
-        nano \
-        openssh-client \
-        python3-colcon-argcomplete \
-        python3-colcon-common-extensions \
-        sudo \
-        vim \
+    bash-completion \
+    curl \
+    gdb \
+    git \
+    nano \
+    openssh-client \
+    python3-colcon-argcomplete \
+    python3-colcon-common-extensions \
+    sudo \
+    vim \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -44,7 +44,8 @@ WORKDIR /home/$USERNAME/ros2_ws
 
 # Copy configuration files
 RUN echo 'source /opt/ros/'$ROS_DISTRO'/setup.bash' >> /home/$USERNAME/.bashrc \
-    && echo 'source /rmf_demos_ws/install/setup.bash' >> /home/$USERNAME/.bashrc
-    # && echo 'source /home/'$USERNAME'/ros2_ws/install/setup.bash' >> /home/$USERNAME/.bashrc
+    && echo 'source /rmf_demos_ws/install/setup.bash' >> /home/$USERNAME/.bashrc \
+    && echo 'cd /home/'$USERNAME'/ros2_ws && colcon build --symlink-install' >> /home/$USERNAME/.bashrc
+# && echo 'source /home/'$USERNAME'/ros2_ws/install/setup.bash' >> /home/$USERNAME/.bashrc
 
 CMD ["bash"]
