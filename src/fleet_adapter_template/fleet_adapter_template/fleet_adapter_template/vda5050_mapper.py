@@ -5,8 +5,8 @@ import uuid
 logger = logging.getLogger(__name__)
 
 class Vda5050Mapper:
-    def __init__(self):
-        pass
+    def __init__(self, lanes: dict[str, list[int]]):
+        self.lanes = lanes
     
     def _create_edge(self, current_node, next_node, sequence_id):
         next_node_props = next_node["props"]
@@ -19,6 +19,8 @@ class Vda5050Mapper:
             direction = "Y-" if current_node["y"] > next_node["y"] else "Y+"
         else:
             direction = "X-" if current_node["x"] > next_node["x"] else "X+"
+        lane = self.lanes.get(f"{current_node_name}{next_node_name}")
+        speed_limit = lane[2].get("speed_limit", 12) if lane is not None else 12 
         return {
                 "edgeId": f"{next_node_name if is_backward else current_node_name}{current_node_name if is_backward else next_node_name}",
                 "sequenceId": sequence_id,
@@ -26,7 +28,7 @@ class Vda5050Mapper:
                 "startNodeId": current_node_name,
                 "endNodeId": next_node_name,
                 "actions": [],
-                "maxSpeed" : 70 * (-1 if is_backward else 1),
+                "maxSpeed" : speed_limit * (-1 if is_backward else 1),
                 "direction" : direction
         }
     

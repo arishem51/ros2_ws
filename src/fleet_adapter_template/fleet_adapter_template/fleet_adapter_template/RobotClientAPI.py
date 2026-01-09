@@ -59,20 +59,22 @@ class RobotAPI:
         self.client.loop_start()
         self.robot_orders = {}
         self.nodes = {}
+        self.lanes = {}
         self.graph = defaultdict[str, list[str]](list)
         with open(nav_graph_path, 'r') as f:
             graph_data = yaml.safe_load(f)
             vertices = graph_data['levels']['L1']['vertices']
             lanes = graph_data['levels']['L1']['lanes']
-            for lane in lanes:
+            for idx, lane in enumerate(lanes):
                 u = vertices[lane[0]][2].get("name", f'qr_{lane[0]}').replace('qr_', '')
                 v = vertices[lane[1]][2].get("name", f'qr_{lane[1]}').replace('qr_', '')
+                self.lanes[f"{u}{v}"] = lane
                 self.graph[u].append(v)
             for idx, vertex in enumerate(vertices):
                 x,y, props = vertex
                 name = props.get('name', f'qr_{idx}').replace('qr_', '')
                 self.nodes[name] = {"x": x, "y": y, "props": {**props, "name": name}}
-        self.vda5050_mapper = Vda5050Mapper()
+        self.vda5050_mapper = Vda5050Mapper(self.lanes)
         self.path_planner = PathPlanner()
 
     def check_connection(self):
