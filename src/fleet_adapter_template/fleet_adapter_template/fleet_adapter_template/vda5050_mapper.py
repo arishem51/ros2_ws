@@ -26,7 +26,7 @@ class Vda5050Mapper:
                 "startNodeId": current_node_name,
                 "endNodeId": next_node_name,
                 "actions": [],
-                "maxSpeed" : 12 * (-1 if is_backward else 1),
+                "maxSpeed" : 70 * (-1 if is_backward else 1),
                 "direction" : direction
         }
     def _expand_path(self, start, goal, graph: defaultdict[str, list[str]]):
