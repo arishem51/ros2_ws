@@ -29,6 +29,7 @@ import paho.mqtt.client as mqtt
 import yaml
 from pathlib import Path
 from .vda5050_mapper import Vda5050Mapper
+from .path_planner import PathPlanner
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ class RobotAPI:
                 name = props.get('name', f'qr_{idx}').replace('qr_', '')
                 self.nodes[name] = {"x": x, "y": y, "props": {**props, "name": name}}
         self.vda5050_mapper = Vda5050Mapper()
+        self.path_planner = PathPlanner()
 
     def check_connection(self):
         return self.client.is_connected()
@@ -114,12 +116,26 @@ class RobotAPI:
         current_node = self.position_to_node_id(self.position(robot_name))
         next_node = self.position_to_node_id(pose)
         logger.info(f"Navigating to pose: {pose} {current_node['props']['name']} {next_node['props']['name']}")
-        order = self.vda5050_mapper.create_order(robot_name, current_node, next_node, self.graph, self.nodes)
+        
+        # Calculate path using PathPlanner
+        current_node_name = current_node["props"]["name"]
+        next_node_name = next_node["props"]["name"]
+        path = self.path_planner.calculate_path(current_node_name, next_node_name, self.graph)
+        
+        if path is None:
+            return False
+        
+        # Check if already at destination
+        if current_node_name == next_node_name or len(path) == 1:
+            return True
+        
+        # Create order from calculated path
+        order = self.vda5050_mapper.create_order(robot_name, path, self.nodes)
         logger.info(f"Order: {order}")
+        
         if order is None:
             return False
-        if (current_node["props"]["name"] == next_node["props"]["name"] ) or len(order["nodes"]) == 1:
-            return True
+        
         topic = f"{self.mqtt_topic}/{robot_name}/order"
         try:
             self.client.publish(topic, json.dumps(order))

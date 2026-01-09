@@ -1,4 +1,3 @@
-from collections import defaultdict, deque
 import logging
 import math
 import uuid
@@ -8,6 +7,7 @@ logger = logging.getLogger(__name__)
 class Vda5050Mapper:
     def __init__(self):
         pass
+    
     def _create_edge(self, current_node, next_node, sequence_id):
         next_node_props = next_node["props"]
         current_node_name = current_node["props"]["name"]
@@ -29,45 +29,35 @@ class Vda5050Mapper:
                 "maxSpeed" : 70 * (-1 if is_backward else 1),
                 "direction" : direction
         }
-    def _expand_path(self, start, goal, graph: defaultdict[str, list[str]]):
-        queue = deque([[start]])
-        visited = set([start])
-        while queue:
-            path = queue.popleft()
-            current = path[-1]
-            if current == goal:
-                return path
-            for neighbor in graph[current]:
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    queue.append(path + [neighbor])
-        return None
     
-    def create_order(self, robot_name: str, current_node, next_node, graph: defaultdict[str, list[str]], graphNodes: dict[str, dict]):
-        if current_node is None or next_node is None:
+    def create_order(self, robot_name: str, path: list[str], nodes: dict[str, dict]):
+        """
+        Create a VDA5050 order from a pre-calculated path.
+        
+        Args:
+            robot_name: Name of the robot
+            path: List of node names representing the path
+            nodes: Dictionary of node data indexed by node name
+            
+        Returns:
+            VDA5050 order dict, or None if path is invalid
+        """
+        if path is None or len(path) == 0:
             return None
-        next_node_props = next_node["props"]
-        current_node_name = current_node["props"]["name"]
-        next_node_name = next_node_props["name"]
 
-        path = self._expand_path(current_node_name, next_node_name, graph)
+        logger.info(f"Creating order for path: {path}")
 
-        logger.info(f"Path: {path}")
-
-        if path is None:
-            return None
-
-        nodes = []
-        edges = []
+        order_nodes = []
+        order_edges = []
         for i in range(len(path)):
-            nodes.append({
+            order_nodes.append({
                 "nodeId": path[i],
                 "sequenceId": i * 2,
                 "released": True,
                 "actions": []
             })
             if i + 1 < len(path):
-                edges.append(self._create_edge(graphNodes[path[i]], graphNodes[path[i + 1]], i * 2 + 1))
+                order_edges.append(self._create_edge(nodes[path[i]], nodes[path[i + 1]], i * 2 + 1))
         
         order = {
             "version": "2.0.0",
@@ -75,7 +65,7 @@ class Vda5050Mapper:
             "serialNumber": robot_name,
             "orderId": str(uuid.uuid4()),
             "orderUpdateId": 0,
-            "nodes": nodes,
-            "edges": edges
+            "nodes": order_nodes,
+            "edges": order_edges
         }
         return order
