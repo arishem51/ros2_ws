@@ -17,7 +17,12 @@ setup(
         ]),
         ('share/' + package_name + '/maps', glob.glob('maps/*')),
     ],
-    install_requires=['setuptools'],
+    install_requires=[
+        'setuptools',
+        'networkx',
+        'paho-mqtt',
+        'pyyaml',
+    ],
     zip_safe=True,
     maintainer='Yadunund',
     maintainer_email='yadunund@openrobotics.org',

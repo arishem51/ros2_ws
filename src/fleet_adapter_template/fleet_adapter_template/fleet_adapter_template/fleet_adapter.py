@@ -18,6 +18,7 @@ import yaml
 import time
 import threading
 import asyncio
+import math
 
 import rclpy
 import rclpy.node
@@ -27,11 +28,59 @@ import rmf_adapter
 from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
 import logging
+import networkx as nx
 from .RobotClientAPI import RobotAPI
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(asctime)s %(message)s')
 
 logger = logging.getLogger(__name__)
+
+
+def load_navigation_graph(nav_graph_path: str) -> tuple[nx.DiGraph, dict[str, dict]]:
+    """
+    Load navigation graph from YAML file and create NetworkX graph.
+    
+    Args:
+        nav_graph_path: Path to the navigation graph YAML file
+        
+    Returns:
+        Tuple of (NetworkX DiGraph, nodes dictionary)
+    """
+    graph = nx.DiGraph()
+    nodes = {}
+    
+    with open(nav_graph_path, 'r') as f:
+        graph_data = yaml.safe_load(f)
+        vertices = graph_data['levels']['L1']['vertices']
+        lanes = graph_data['levels']['L1']['lanes']
+        
+        # First pass: create nodes with coordinates
+        for idx, vertex in enumerate(vertices):
+            x, y, props = vertex
+            name = props.get('name', f'qr_{idx}').replace('qr_', '')
+            nodes[name] = {"x": x, "y": y, "props": {**props, "name": name}}
+            # Add node to NetworkX graph with position attributes
+            graph.add_node(name, x=x, y=y, **props)
+        
+        # Second pass: create edges with attributes
+        for idx, lane in enumerate(lanes):
+            u_idx, v_idx, lane_props = lane[0], lane[1], lane[2] if len(lane) > 2 else {}
+            u = vertices[u_idx][2].get("name", f'qr_{u_idx}').replace('qr_', '')
+            v = vertices[v_idx][2].get("name", f'qr_{v_idx}').replace('qr_', '')
+            
+            # Calculate edge weight (Euclidean distance)
+            u_node = nodes[u]
+            v_node = nodes[v]
+            distance = math.sqrt((u_node["x"] - v_node["x"])**2 + (u_node["y"] - v_node["y"])**2)
+            
+            # Get speed limit from lane properties
+            speed_limit = lane_props.get("speed_limit", 12)
+            
+            # Add edge with weight and speed_limit attributes
+            graph.add_edge(u, v, weight=distance, speed_limit=speed_limit)
+    
+    logger.info(f"Loaded navigation graph with {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges")
+    return graph, nodes
 
 
 # ------------------------------------------------------------------------------
@@ -90,9 +139,12 @@ def main(argv=sys.argv):
 
     fleet_handle = adapter.add_easy_fleet(fleet_config)
 
+    # Load navigation graph
+    graph, nodes = load_navigation_graph(nav_graph_path)
+
     # Initialize robot API for this fleet
     fleet_mgr_yaml = config_yaml['fleet_manager']
-    api = RobotAPI(fleet_mgr_yaml, nav_graph_path)
+    api = RobotAPI(fleet_mgr_yaml, graph, nodes)
 
     robots = {}
     for robot_name in fleet_config.known_robots:

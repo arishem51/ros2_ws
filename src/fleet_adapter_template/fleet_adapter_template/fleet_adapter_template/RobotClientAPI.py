@@ -21,15 +21,12 @@
     these functions.
 '''
 
-from collections import defaultdict
 import json
 import logging
 import math
+import networkx as nx
 import paho.mqtt.client as mqtt
-import yaml
-from pathlib import Path
-from .vda5050_mapper import Vda5050Mapper
-from .path_planner import PathPlanner
+from .utils import calculate_path, create_vda5050_order
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +35,15 @@ class RobotAPI:
     # The constructor below accepts parameters typically required to submit
     # http requests. Users should modify the constructor as per the
     # requirements of their robot's API
-    def __init__(self, config_yaml, nav_graph_path):
+    def __init__(self, config_yaml, graph: nx.DiGraph, nodes: dict[str, dict]):
+        """
+        Initialize RobotAPI with configuration and navigation graph.
+        
+        Args:
+            config_yaml: Configuration dictionary with MQTT settings
+            graph: NetworkX DiGraph representing the navigation graph
+            nodes: Dictionary of node data indexed by node name
+        """
         self.mqtt_broker = config_yaml['mqtt_broker']
         self.mqtt_topic = config_yaml['mqtt_topic']
         self.mqtt_client_id = config_yaml['mqtt_client_id']
@@ -51,31 +56,16 @@ class RobotAPI:
         self.debug = False
         self.robot_states = {}
         self.client = mqtt.Client(self.mqtt_client_id)
-        self.nav_graph_path = Path(nav_graph_path)
         self.client.on_message = self.on_message
         self.client.on_connect = self.on_connect
         self.client.username_pw_set(self.mqtt_username, self.mqtt_password)
         self.client.connect(self.mqtt_broker, keepalive=self.mqtt_keepalive)
         self.client.loop_start()
         self.robot_orders = {}
-        self.nodes = {}
-        self.lanes = {}
-        self.graph = defaultdict[str, list[str]](list)
-        with open(nav_graph_path, 'r') as f:
-            graph_data = yaml.safe_load(f)
-            vertices = graph_data['levels']['L1']['vertices']
-            lanes = graph_data['levels']['L1']['lanes']
-            for idx, lane in enumerate(lanes):
-                u = vertices[lane[0]][2].get("name", f'qr_{lane[0]}').replace('qr_', '')
-                v = vertices[lane[1]][2].get("name", f'qr_{lane[1]}').replace('qr_', '')
-                self.lanes[f"{u}{v}"] = lane
-                self.graph[u].append(v)
-            for idx, vertex in enumerate(vertices):
-                x,y, props = vertex
-                name = props.get('name', f'qr_{idx}').replace('qr_', '')
-                self.nodes[name] = {"x": x, "y": y, "props": {**props, "name": name}}
-        self.vda5050_mapper = Vda5050Mapper(self.lanes)
-        self.path_planner = PathPlanner()
+        
+        # Store graph and nodes passed from fleet adapter
+        self.graph = graph
+        self.nodes = nodes
 
     def check_connection(self):
         return self.client.is_connected()
@@ -119,10 +109,11 @@ class RobotAPI:
         next_node = self.position_to_node_id(pose)
         logger.info(f"Navigating to pose: {pose} {current_node['props']['name']} {next_node['props']['name']}")
         
-        # Calculate path using PathPlanner
         current_node_name = current_node["props"]["name"]
         next_node_name = next_node["props"]["name"]
-        path = self.path_planner.calculate_path(current_node_name, next_node_name, self.graph)
+        path = calculate_path(self.graph, self.nodes, current_node_name, next_node_name)
+
+        logger.info(f"Path: {path}")
         
         if path is None:
             return False
@@ -130,7 +121,7 @@ class RobotAPI:
         if current_node_name == next_node_name or len(path) == 1:
             return False
         
-        order = self.vda5050_mapper.create_order(robot_name, path, self.nodes)
+        order = create_vda5050_order(self.graph, self.nodes, robot_name, path)
         logger.info(f"Order: {order}")
         
         if order is None:
