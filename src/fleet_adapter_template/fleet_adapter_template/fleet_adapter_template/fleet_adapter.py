@@ -248,7 +248,6 @@ def update_robot(robot: RobotAdapter):
     data = robot.api.get_data(robot.name)
     if data is None:
         return
-
     state = rmf_easy.RobotState(
         data.map,
         data.position,

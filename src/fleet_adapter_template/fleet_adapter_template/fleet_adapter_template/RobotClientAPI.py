@@ -127,11 +127,9 @@ class RobotAPI:
         if path is None:
             return False
         
-        # Check if already at destination
         if current_node_name == next_node_name or len(path) == 1:
-            return True
+            return False
         
-        # Create order from calculated path
         order = self.vda5050_mapper.create_order(robot_name, path, self.nodes)
         logger.info(f"Order: {order}")
         
