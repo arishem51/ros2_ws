@@ -14,6 +14,7 @@
 
 import sys
 import argparse
+from rclpy.qos import QoSProfile, qos_profile_system_default
 import yaml
 import time
 import threading
@@ -22,7 +23,7 @@ import math
 
 import rclpy
 import rclpy.node
-from rclpy.parameter import Parameter
+from rmf_fleet_msgs.msg import ClosedLanes, LaneRequest
 
 import rmf_adapter
 from rmf_adapter import Adapter
@@ -30,6 +31,11 @@ import rmf_adapter.easy_full_control as rmf_easy
 import logging
 import networkx as nx
 from .RobotClientAPI import RobotAPI
+
+from rclpy.qos import QoSDurabilityPolicy as Durability
+from rclpy.qos import QoSHistoryPolicy as History
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSReliabilityPolicy as Reliability
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(asctime)s %(message)s')
 
@@ -174,6 +180,9 @@ def main(argv=sys.argv):
     update_thread = threading.Thread(target=update_loop, args=())
     update_thread.start()
 
+    connections = ros_connections(node, robots, fleet_handle)
+    connections
+
     # Create executor for the command handle node
     rclpy_executor = rclpy.executors.SingleThreadedExecutor()
     rclpy_executor.add_node(node)
@@ -203,6 +212,8 @@ class RobotAdapter:
         self.node = node
         self.api = api
         self.fleet_handle = fleet_handle
+        self.task_list = []
+        self.task_id = None
 
     def update(self, state):
         activity_identifier = None
@@ -282,6 +293,62 @@ class RobotAdapter:
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return
+
+
+def ros_connections(node, robots, fleet_handle):
+    fleet_name = fleet_handle.more().fleet_name
+    transeint_qos = QoSProfile(
+        history=History.KEEP_LAST,
+        depth=1,
+        reliability=Reliability.RELIABLE,
+        durability=Durability.TRANSIENT_LOCAL,
+    )
+
+    close_lanes_pub = node.create_publisher(
+        ClosedLanes,
+        'closed_lanes',
+        qos_profile=transeint_qos
+    )
+
+    closed_lanes = set()
+
+    def lane_request_cb(msg):
+        if msg.fleet_name and msg.fleet_name != fleet_name:
+            print(f'Ignoring lane request for fleet [{msg.fleet_name}]')
+            return
+
+        if msg.open_lanes:
+            print(f'Opening lanes: {msg.open_lanes}')
+
+        if msg.close_lanes:
+            print(f'Closing lanes: {msg.close_lanes}')
+
+        fleet_handle.more().open_lanes(msg.open_lanes)
+        fleet_handle.more().close_lanes(msg.close_lanes)
+
+        for lane_idx in msg.close_lanes:
+            closed_lanes.add(lane_idx)
+
+        for lane_idx in msg.open_lanes:
+            closed_lanes.remove(lane_idx)
+
+        state_msg = ClosedLanes()
+        state_msg.fleet_name = fleet_name
+        state_msg.closed_lanes = list(closed_lanes)
+        close_lanes_pub.publish(state_msg)
+
+    lane_request_sub = node.create_subscription(
+        LaneRequest,
+        'lane_closure_requests',
+        lane_request_cb,
+        qos_profile=qos_profile_system_default,
+    )
+    
+    return [
+        lane_request_sub,
+    ]
+
+    ## todo: task management with updateOrderId instead of creating new order for each navigate calling
 
 
 # Parallel processing solution derived from
