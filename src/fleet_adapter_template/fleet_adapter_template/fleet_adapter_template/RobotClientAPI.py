@@ -24,10 +24,9 @@
 import json
 import logging
 import math
+import networkx as nx
 import paho.mqtt.client as mqtt
-import yaml
-from pathlib import Path
-from .vda5050_mapper import Vda5050Mapper
+from .utils import calculate_path, create_vda5050_order
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,15 @@ class RobotAPI:
     # The constructor below accepts parameters typically required to submit
     # http requests. Users should modify the constructor as per the
     # requirements of their robot's API
-    def __init__(self, config_yaml, nav_graph_path):
+    def __init__(self, config_yaml, graph: nx.DiGraph, nodes: dict[str, dict]):
+        """
+        Initialize RobotAPI with configuration and navigation graph.
+        
+        Args:
+            config_yaml: Configuration dictionary with MQTT settings
+            graph: NetworkX DiGraph representing the navigation graph
+            nodes: Dictionary of node data indexed by node name
+        """
         self.mqtt_broker = config_yaml['mqtt_broker']
         self.mqtt_topic = config_yaml['mqtt_topic']
         self.mqtt_client_id = config_yaml['mqtt_client_id']
@@ -49,25 +56,19 @@ class RobotAPI:
         self.debug = False
         self.robot_states = {}
         self.client = mqtt.Client(self.mqtt_client_id)
-        self.nav_graph_path = Path(nav_graph_path)
         self.client.on_message = self.on_message
         self.client.on_connect = self.on_connect
         self.client.username_pw_set(self.mqtt_username, self.mqtt_password)
         self.client.connect(self.mqtt_broker, keepalive=self.mqtt_keepalive)
         self.client.loop_start()
         self.robot_orders = {}
-        self.nodes = {}
-        with open(nav_graph_path, 'r') as f:
-            graph_data = yaml.safe_load(f)
-            vertices = graph_data['levels']['L1']['vertices']
-            for idx, vertex in enumerate(vertices):
-                x,y, props = vertex
-                name = props.get('name', f'qr_{idx}').replace('qr_', '')
-                self.nodes[name] = {"x": x, "y": y, "props": {**props, "name": name}}
-        self.vda5050_mapper = Vda5050Mapper()
+        self.prev_robot_des_qr = {}
+        
+        # Store graph and nodes passed from fleet adapter
+        self.graph = graph
+        self.nodes = nodes
 
     def check_connection(self):
-        ''' Return True if connection to the robot API server is successful '''
         return self.client.is_connected()
 
     def localize(
@@ -105,21 +106,32 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False '''
-        logger.info(f"Navigating to pose: {pose}")
         current_node = self.position_to_node_id(self.position(robot_name))
         next_node = self.position_to_node_id(pose)
-        order = self.vda5050_mapper.map_order(current_node, next_node)
-        if order is None:
-            logger.error(f"No order found for current node: {current_node['props']['name']} and next node: {next_node['props']['name']}")
+        logger.info(f"Navigating to pose: {pose} {current_node['props']['name']} {next_node['props']['name']}")
+        
+        current_node_name = current_node["props"]["name"]
+        next_node_name = next_node["props"]["name"]
+        path = calculate_path(self.graph, self.nodes, current_node_name, next_node_name)
+
+        logger.info(f"Path: {path}")
+        
+        if path is None:
             return False
-        if current_node["props"]["name"] == next_node["props"]["name"]:
-            logger.info(f"Current node and next node are the same: {current_node['props']['name']}")
-            return True
+        
+        self.prev_robot_des_qr[robot_name] = next_node_name
+        if current_node_name == next_node_name or len(path) == 1:
+            return False
+        
+        order = create_vda5050_order(self.graph, self.nodes, robot_name, path)
+        
+        if order is None:
+            return False
+        
         topic = f"{self.mqtt_topic}/{robot_name}/order"
         try:
             self.client.publish(topic, json.dumps(order))
             self.robot_orders[robot_name] = order
-            logger.info(f"Published order: {order}")
             return True
         except Exception as e:
             logger.error(f"Failed to publish order: {e}")
@@ -148,6 +160,30 @@ class RobotAPI:
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return False
+    def _is_reversed_target(self, node):
+        props = node.get("props", {})
+        return props.get('is_parking_spot', False) or props.get('is_charger', False)
+
+    def _get_orientation(self, robot_name: str):
+        if robot_name in self.robot_orders and len(self.robot_orders[robot_name]["nodes"]) > 1:
+            order = self.robot_orders[robot_name]
+            [cur_node_order, next_node_order] = order["nodes"][:2]
+            if cur_node_order["nodeId"] == next_node_order["nodeId"]:
+                return 0
+            cur_node = self.nodes[cur_node_order["nodeId"]]
+            next_node = self.nodes[next_node_order["nodeId"]]
+            dx = next_node["x"] - cur_node["x"]
+            dy = next_node["y"] - cur_node["y"]
+            yaw = math.atan2(dy, dx)
+            reverse = self._is_reversed_target(next_node)
+            if reverse:
+                yaw += math.pi
+            return (yaw + math.pi) % (2 * math.pi) - math.pi
+        cur_node = self.nodes[self.robot_states[robot_name]["last_node_id"]]
+        if self._is_reversed_target(cur_node):
+            return math.pi
+        return 0
+        
 
     def position(self, robot_name: str):
         if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
@@ -155,7 +191,7 @@ class RobotAPI:
         last_node_id = self.robot_states[robot_name]["last_node_id"]
         if(last_node_id in self.nodes):
             node = self.nodes[last_node_id]
-            return [node["x"], node["y"], 0]
+            return [node["x"], node["y"], self._get_orientation(robot_name)]
         return None
 
     def battery_soc(self, robot_name: str):
@@ -167,12 +203,15 @@ class RobotAPI:
         return "L1"
 
     def is_command_completed(self, robot_name: str):
-        ''' Return True if the robot has completed its last command, else
-        return False. '''
+        if self.robot_states.get(robot_name, {}).get("last_node_id", None) == self.prev_robot_des_qr.get(robot_name, None):
+                return True
         if robot_name in self.robot_orders:
+            if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
+                return False
+                
             cur_order = self.robot_orders[robot_name]
-            if cur_order["nodes"][1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
-                logger.info(f"Order completed: {cur_order}")
+            if cur_order["nodes"][-1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
+                del self.robot_orders[robot_name]
                 return True
         return False
 

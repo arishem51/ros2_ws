@@ -5,219 +5,220 @@ levels:
     lanes:
     - - 0
       - 1
-      - {is_bidirectional: false}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 2
       - 3
-      - {}
-    - - 3
-      - 2
-      - {}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 4
       - 5
-      - {}
-    - - 5
-      - 4
-      - {}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 6
-      - 1
-      - {}
-    - - 1
-      - 6
-      - {}
-    - - 7
-      - 8
-      - {is_bidirectional: false}
+      - 7
+      - {is_bidirectional: false, speed_limit: 70}
     - - 8
       - 9
-      - {}
-    - - 9
-      - 8
-      - {}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 10
       - 11
-      - {}
-    - - 11
-      - 10
-      - {}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 12
       - 13
-      - {is_bidirectional: false}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 14
       - 15
-      - {}
-    - - 15
-      - 14
-      - {}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 16
       - 17
-      - {}
-    - - 17
-      - 16
-      - {}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 18
       - 19
-      - {}
-    - - 19
-      - 18
-      - {}
-    - - 20
-      - 5
-      - {is_bidirectional: false}
-    - - 21
-      - 2
-      - {is_bidirectional: false}
-    - - 22
-      - 11
-      - {is_bidirectional: false}
-    - - 23
-      - 14
-      - {is_bidirectional: false}
-    - - 24
-      - 16
-      - {is_bidirectional: false}
-    - - 25
-      - 18
-      - {is_bidirectional: false}
-    - - 26
-      - 27
-      - {is_bidirectional: false}
-    - - 5
-      - 2
-      - {is_bidirectional: false}
-    - - 2
-      - 1
-      - {is_bidirectional: false}
-    - - 1
-      - 8
-      - {is_bidirectional: false}
-    - - 8
-      - 11
-      - {is_bidirectional: false}
-    - - 11
-      - 14
-      - {is_bidirectional: false}
-    - - 14
-      - 16
-      - {is_bidirectional: false}
-    - - 16
-      - 18
-      - {is_bidirectional: false}
-    - - 18
-      - 27
-      - {is_bidirectional: false}
-    - - 27
-      - 12
-      - {is_bidirectional: false}
-    - - 13
-      - 26
-      - {is_bidirectional: false}
-    - - 26
-      - 25
-      - {is_bidirectional: false}
-    - - 25
-      - 24
-      - {is_bidirectional: false}
-    - - 24
-      - 23
-      - {is_bidirectional: false}
-    - - 23
-      - 22
-      - {is_bidirectional: false}
-    - - 22
-      - 7
-      - {is_bidirectional: false}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 7
+      - 9
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 9
+      - 1
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 1
+      - 3
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 3
+      - 11
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 11
+      - 13
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 13
+      - 15
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 15
+      - 17
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 17
+      - 19
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 19
+      - 4
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 5
+      - 18
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 18
+      - 16
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 16
+      - 14
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 14
+      - 12
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 12
+      - 10
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 10
+      - 2
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 2
       - 0
-      - {is_bidirectional: false}
+      - {is_bidirectional: false, speed_limit: 70}
     - - 0
-      - 21
-      - {is_bidirectional: false}
-    - - 21
+      - 8
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 8
+      - 6
+      - {is_bidirectional: false, speed_limit: 70}
+    - - 20
+      - 7
+      - {speed_limit: 12}
+    - - 7
       - 20
-      - {is_bidirectional: false}
+      - {speed_limit: 12}
+    - - 21
+      - 9
+      - {speed_limit: 12}
+    - - 9
+      - 21
+      - {speed_limit: 12}
+    - - 22
+      - 1
+      - {speed_limit: 12}
+    - - 1
+      - 22
+      - {speed_limit: 12}
+    - - 23
+      - 3
+      - {speed_limit: 12}
+    - - 3
+      - 23
+      - {speed_limit: 12}
+    - - 24
+      - 11
+      - {speed_limit: 12}
+    - - 11
+      - 24
+      - {speed_limit: 12}
+    - - 25
+      - 13
+      - {speed_limit: 12}
+    - - 13
+      - 25
+      - {speed_limit: 12}
+    - - 26
+      - 15
+      - {speed_limit: 12}
+    - - 15
+      - 26
+      - {speed_limit: 12}
+    - - 27
+      - 17
+      - {speed_limit: 12}
+    - - 17
+      - 27
+      - {speed_limit: 12}
     vertices:
     - - 12.325517235555742
       - -2.254064958917136
-      - {name: qr_0191}
+      - {is_holding_point: true, mutex: '', name: qr_0191}
     - - 13.250876487796312
       - -2.2499332261336003
-      - {name: qr_0467}
-    - - 13.250876487796312
-      - -1.3328560508690361
-      - {name: qr_0468}
-    - - 14.192744059762092
-      - -1.341119516436108
-      - {is_charger: true, name: qr_1011}
-    - - 14.172792629383936
-      - -0.41270799313022244
-      - {is_parking_spot: true, name: qr_1012}
-    - - 13.245237230889053
-      - -0.3999591780098525
-      - {name: qr_0099}
-    - - 14.200318903198575
-      - -2.264617627783194
-      - {is_charger: true, name: qr_1010}
+      - {is_holding_point: true, mutex: '', name: qr_0467}
     - - 12.316509313631277
       - -3.1920055235976634
-      - {name: qr_0192}
+      - {is_holding_point: true, mutex: '', name: qr_0192}
     - - 13.247917273775672
       - -3.1920055235976634
-      - {name: qr_0466}
-    - - 14.179306622511133
-      - -3.206261862841756
-      - {is_parking_spot: true, name: qr_1104}
-    - - 14.191925157768958
-      - -4.1255910185874365
-      - {is_parking_spot: true, name: qr_1103}
-    - - 13.249759803260222
-      - -4.117681169790127
-      - {name: qr_0465}
+      - {is_holding_point: true, mutex: '', name: qr_0466}
     - - 13.231185617143245
       - -8.781309409275043
-      - {name: qr_0095}
+      - {is_holding_point: true, mutex: '', name: qr_0095}
     - - 12.319747698785939
       - -8.781309409275043
-      - {name: qr_0094}
-    - - 13.25370542195441
-      - -5.059846524298864
-      - {name: qr_0464}
-    - - 14.19588938787208
-      - -5.0677749845051085
-      - {is_parking_spot: true, name: qr_1102}
-    - - 13.25370542195441
-      - -5.990137799907169
-      - {name: qr_0463}
-    - - 14.19983500656627
-      - -5.998066260113413
-      - {is_parking_spot: true, name: qr_1101}
-    - - 13.24250135377563
-      - -6.9301256195705285
-      - {name: qr_0462}
-    - - 14.187905093439031
-      - -6.935802099295657
-      - {is_parking_spot: true, name: qr_1100}
+      - {is_holding_point: true, mutex: '', name: qr_0094}
     - - 12.321385502772205
       - -0.41162853141200134
-      - {name: qr_0189}
+      - {is_holding_point: true, mutex: '', name: qr_0189}
+    - - 13.245237230889053
+      - -0.3999591780098525
+      - {is_holding_point: true, mutex: '', name: qr_0099}
     - - 12.333780701122814
       - -1.3245925853019644
-      - {name: qr_0190}
+      - {is_holding_point: true, mutex: '', name: qr_0190}
+    - - 13.250876487796312
+      - -1.3328560508690361
+      - {is_holding_point: true, mutex: '', name: qr_0468}
     - - 12.315504297548793
       - -4.133519478793681
-      - {name: qr_0193}
+      - {is_holding_point: true, mutex: '', name: qr_0193}
+    - - 13.249759803260222
+      - -4.117681169790127
+      - {is_holding_point: true, mutex: '', name: qr_0465}
     - - 12.315504297548793
       - -5.059846524298864
-      - {name: qr_0194}
+      - {is_holding_point: true, mutex: '', name: qr_0194}
+    - - 13.25370542195441
+      - -5.059846524298864
+      - {is_holding_point: true, mutex: '', name: qr_0464}
     - - 12.325405567102132
       - -5.984721879907129
-      - {name: qr_0195}
+      - {is_holding_point: true, mutex: '', name: qr_0195}
+    - - 13.25370542195441
+      - -5.990137799907169
+      - {is_holding_point: true, mutex: '', name: qr_0463}
     - - 12.308431962153552
       - -6.907494146305755
-      - {name: qr_0196}
+      - {is_holding_point: true, mutex: '', name: qr_0196}
+    - - 13.24250135377563
+      - -6.9301256195705285
+      - {is_holding_point: true, mutex: '', name: qr_0462}
     - - 12.308431962153552
       - -7.869871490917736
-      - {name: qr_0197}
+      - {is_holding_point: true, mutex: '', name: qr_0197}
     - - 13.259493570133145
       - -7.858555754285351
-      - {name: qr_0461}
+      - {is_holding_point: true, mutex: '', name: qr_0461}
+    - - 14.172792629383936
+      - -0.41270799313022244
+      - {is_charger: true, is_holding_point: true, is_parking_spot: false, mutex: '',
+        name: qr_1012}
+    - - 14.192744059762092
+      - -1.341119516436108
+      - {is_charger: true, is_holding_point: true, mutex: '', name: qr_1011}
+    - - 14.200318903198575
+      - -2.264617627783194
+      - {is_charger: true, is_holding_point: true, mutex: '', name: qr_1010}
+    - - 14.179306622511133
+      - -3.206261862841756
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1104}
+    - - 14.191925157768958
+      - -4.1255910185874365
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1103}
+    - - 14.19588938787208
+      - -5.0677749845051085
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1102}
+    - - 14.19983500656627
+      - -5.998066260113413
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1101}
+    - - 14.187905093439031
+      - -6.935802099295657
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1100}
 lifts: {}

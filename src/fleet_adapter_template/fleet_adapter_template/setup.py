@@ -1,12 +1,12 @@
 import glob
-from setuptools import setup
+from setuptools import find_packages, setup
 
 package_name = 'fleet_adapter_template'
 
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[package_name],
+    packages=find_packages(include=[package_name, package_name + '.*']),
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -17,7 +17,12 @@ setup(
         ]),
         ('share/' + package_name + '/maps', glob.glob('maps/*')),
     ],
-    install_requires=['setuptools'],
+    install_requires=[
+        'setuptools',
+        'networkx',
+        'paho-mqtt',
+        'pyyaml',
+    ],
     zip_safe=True,
     maintainer='Yadunund',
     maintainer_email='yadunund@openrobotics.org',
@@ -28,6 +33,7 @@ setup(
         'console_scripts': [
             'fleet_adapter=fleet_adapter_template.fleet_adapter:main',
             'dispatch_go_to_place=fleet_adapter_template.tasks.dispatch_go_to_place:main',
+            'cancel_task=fleet_adapter_template.tasks.cancel_task:main',
         ],
     },
 )
