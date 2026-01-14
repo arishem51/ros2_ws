@@ -65,7 +65,6 @@ def load_navigation_graph(nav_graph_path: str) -> tuple[nx.DiGraph, dict[str, di
             x, y, props = vertex
             name = props.get('name', f'qr_{idx}').replace('qr_', '')
             nodes[name] = {"x": x, "y": y, "props": {**props, "name": name}}
-            # Add node to NetworkX graph with position attributes
             graph.add_node(name, x=x, y=y, **props)
         
         # Second pass: create edges with attributes
@@ -74,15 +73,12 @@ def load_navigation_graph(nav_graph_path: str) -> tuple[nx.DiGraph, dict[str, di
             u = vertices[u_idx][2].get("name", f'qr_{u_idx}').replace('qr_', '')
             v = vertices[v_idx][2].get("name", f'qr_{v_idx}').replace('qr_', '')
             
-            # Calculate edge weight (Euclidean distance)
             u_node = nodes[u]
             v_node = nodes[v]
             distance = math.sqrt((u_node["x"] - v_node["x"])**2 + (u_node["y"] - v_node["y"])**2)
             
-            # Get speed limit from lane properties
             speed_limit = lane_props.get("speed_limit", 12)
             
-            # Add edge with weight and speed_limit attributes
             graph.add_edge(u, v, weight=distance, speed_limit=speed_limit)
     
     logger.info(f"Loaded navigation graph with {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges")
@@ -214,6 +210,8 @@ class RobotAdapter:
         self.fleet_handle = fleet_handle
         self.task_list = []
         self.task_id = None
+        self.log_counter = 0
+        self.prev_state = None
 
     def update(self, state):
         activity_identifier = None

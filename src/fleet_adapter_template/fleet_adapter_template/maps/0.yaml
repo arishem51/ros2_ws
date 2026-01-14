@@ -138,86 +138,87 @@ levels:
     vertices:
     - - 12.325517235555742
       - -2.254064958917136
-      - {name: qr_0191}
+      - {is_holding_point: true, mutex: '', name: qr_0191}
     - - 13.250876487796312
       - -2.2499332261336003
-      - {name: qr_0467}
+      - {is_holding_point: true, mutex: '', name: qr_0467}
     - - 12.316509313631277
       - -3.1920055235976634
-      - {name: qr_0192}
+      - {is_holding_point: true, mutex: '', name: qr_0192}
     - - 13.247917273775672
       - -3.1920055235976634
-      - {name: qr_0466}
+      - {is_holding_point: true, mutex: '', name: qr_0466}
     - - 13.231185617143245
       - -8.781309409275043
-      - {name: qr_0095}
+      - {is_holding_point: true, mutex: '', name: qr_0095}
     - - 12.319747698785939
       - -8.781309409275043
-      - {name: qr_0094}
+      - {is_holding_point: true, mutex: '', name: qr_0094}
     - - 12.321385502772205
       - -0.41162853141200134
-      - {name: qr_0189}
+      - {is_holding_point: true, mutex: '', name: qr_0189}
     - - 13.245237230889053
       - -0.3999591780098525
-      - {name: qr_0099}
+      - {is_holding_point: true, mutex: '', name: qr_0099}
     - - 12.333780701122814
       - -1.3245925853019644
-      - {name: qr_0190}
+      - {is_holding_point: true, mutex: '', name: qr_0190}
     - - 13.250876487796312
       - -1.3328560508690361
-      - {name: qr_0468}
+      - {is_holding_point: true, mutex: '', name: qr_0468}
     - - 12.315504297548793
       - -4.133519478793681
-      - {name: qr_0193}
+      - {is_holding_point: true, mutex: '', name: qr_0193}
     - - 13.249759803260222
       - -4.117681169790127
-      - {name: qr_0465}
+      - {is_holding_point: true, mutex: '', name: qr_0465}
     - - 12.315504297548793
       - -5.059846524298864
-      - {name: qr_0194}
+      - {is_holding_point: true, mutex: '', name: qr_0194}
     - - 13.25370542195441
       - -5.059846524298864
-      - {name: qr_0464}
+      - {is_holding_point: true, mutex: '', name: qr_0464}
     - - 12.325405567102132
       - -5.984721879907129
-      - {name: qr_0195}
+      - {is_holding_point: true, mutex: '', name: qr_0195}
     - - 13.25370542195441
       - -5.990137799907169
-      - {name: qr_0463}
+      - {is_holding_point: true, mutex: '', name: qr_0463}
     - - 12.308431962153552
       - -6.907494146305755
-      - {name: qr_0196}
+      - {is_holding_point: true, mutex: '', name: qr_0196}
     - - 13.24250135377563
       - -6.9301256195705285
-      - {name: qr_0462}
+      - {is_holding_point: true, mutex: '', name: qr_0462}
     - - 12.308431962153552
       - -7.869871490917736
-      - {name: qr_0197}
+      - {is_holding_point: true, mutex: '', name: qr_0197}
     - - 13.259493570133145
       - -7.858555754285351
-      - {name: qr_0461}
+      - {is_holding_point: true, mutex: '', name: qr_0461}
     - - 14.172792629383936
       - -0.41270799313022244
-      - {is_charger: true, is_parking_spot: false, name: qr_1012}
+      - {is_charger: true, is_holding_point: true, is_parking_spot: false, mutex: '',
+        name: qr_1012}
     - - 14.192744059762092
       - -1.341119516436108
-      - {is_charger: true, name: qr_1011}
+      - {is_charger: true, is_holding_point: true, mutex: '', name: qr_1011}
     - - 14.200318903198575
       - -2.264617627783194
-      - {is_charger: true, name: qr_1010}
+      - {is_charger: true, is_holding_point: true, mutex: '', name: qr_1010}
     - - 14.179306622511133
       - -3.206261862841756
-      - {is_parking_spot: true, name: qr_1104}
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1104}
     - - 14.191925157768958
       - -4.1255910185874365
-      - {is_parking_spot: true, name: qr_1103}
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1103}
     - - 14.19588938787208
       - -5.0677749845051085
-      - {is_parking_spot: true, name: qr_1102}
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1102}
     - - 14.19983500656627
       - -5.998066260113413
-      - {is_parking_spot: true, name: qr_1101}
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1101}
     - - 14.187905093439031
       - -6.935802099295657
-      - {is_parking_spot: true, name: qr_1100}
+      - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1100}
 lifts: {}

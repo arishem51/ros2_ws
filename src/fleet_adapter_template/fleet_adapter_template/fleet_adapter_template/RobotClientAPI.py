@@ -62,6 +62,7 @@ class RobotAPI:
         self.client.connect(self.mqtt_broker, keepalive=self.mqtt_keepalive)
         self.client.loop_start()
         self.robot_orders = {}
+        self.prev_robot_des_qr = {}
         
         # Store graph and nodes passed from fleet adapter
         self.graph = graph
@@ -118,11 +119,11 @@ class RobotAPI:
         if path is None:
             return False
         
+        self.prev_robot_des_qr[robot_name] = next_node_name
         if current_node_name == next_node_name or len(path) == 1:
             return False
         
         order = create_vda5050_order(self.graph, self.nodes, robot_name, path)
-        logger.info(f"Order: {order}")
         
         if order is None:
             return False
@@ -202,14 +203,14 @@ class RobotAPI:
         return "L1"
 
     def is_command_completed(self, robot_name: str):
+        if self.robot_states.get(robot_name, {}).get("last_node_id", None) == self.prev_robot_des_qr.get(robot_name, None):
+                return True
         if robot_name in self.robot_orders:
-            # Check if robot_states has the required data
             if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
                 return False
-            
+                
             cur_order = self.robot_orders[robot_name]
             if cur_order["nodes"][-1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
-                # Order completed - clean up to prevent memory leak
                 del self.robot_orders[robot_name]
                 return True
         return False

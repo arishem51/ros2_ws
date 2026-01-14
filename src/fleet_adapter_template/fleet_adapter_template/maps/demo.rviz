@@ -16,7 +16,7 @@ Panels:
         - /Map1/Topic1
         - /Map1/Update Topic1
       Splitter Ratio: 0.5
-    Tree Height: 665
+    Tree Height: 443
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -190,11 +190,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 54.14311599731445
+      Scale: 85.19523620605469
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
-      X: 8.76913833618164
-      Y: -4.029160976409912
+      X: 9.99156379699707
+      Y: -4.193012237548828
     Saved: ~
 Window Geometry:
   Displays:
