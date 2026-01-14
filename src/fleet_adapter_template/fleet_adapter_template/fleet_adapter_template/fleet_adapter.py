@@ -208,10 +208,6 @@ class RobotAdapter:
         self.node = node
         self.api = api
         self.fleet_handle = fleet_handle
-        self.task_list = []
-        self.task_id = None
-        self.log_counter = 0
-        self.prev_state = None
 
     def update(self, state):
         activity_identifier = None

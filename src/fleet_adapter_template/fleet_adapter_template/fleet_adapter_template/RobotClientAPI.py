@@ -238,8 +238,13 @@ class RobotAPI:
                 **self.robot_states.get(robot_name, {}),
                 "last_node_id": last_node_id
             }
+        if "distanceSinceLastNode" in payload:
+            distance_since_last_node = payload["distanceSinceLastNode"]
+            self.robot_states[robot_name] = {
+                **self.robot_states.get(robot_name, {}),
+                "distance_since_last_node": distance_since_last_node
+            }
         
-
     def get_data(self, robot_name: str):
         map = self.map(robot_name)
         position = self.position(robot_name)
