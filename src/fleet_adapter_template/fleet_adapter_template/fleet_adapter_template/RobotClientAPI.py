@@ -35,14 +35,13 @@ class RobotAPI:
     # The constructor below accepts parameters typically required to submit
     # http requests. Users should modify the constructor as per the
     # requirements of their robot's API
-    def __init__(self, config_yaml, graph: nx.DiGraph, nodes: dict[str, dict]):
+    def __init__(self, config_yaml, graph: nx.DiGraph):
         """
         Initialize RobotAPI with configuration and navigation graph.
         
         Args:
             config_yaml: Configuration dictionary with MQTT settings
             graph: NetworkX DiGraph representing the navigation graph
-            nodes: Dictionary of node data indexed by node name
         """
         self.mqtt_broker = config_yaml['mqtt_broker']
         self.mqtt_topic = config_yaml['mqtt_topic']
@@ -64,9 +63,7 @@ class RobotAPI:
         self.robot_orders = {}
         self.prev_robot_des_qr = {}
         
-        # Store graph and nodes passed from fleet adapter
         self.graph = graph
-        self.nodes = nodes
 
     def check_connection(self):
         return self.client.is_connected()
@@ -85,15 +82,16 @@ class RobotAPI:
         # ------------------------ #
         return False
     def position_to_node_id(self, position):
-        next_node = None
+        closest_node_name = None
         min_dist = float('inf')
-        for _, node in self.nodes.items():
+        for node_name in self.graph.nodes:
+            node = self.graph.nodes[node_name]
             x, y = node["x"], node["y"]
             dist = math.hypot(x - position[0], y - position[1])
-            if next_node is None or dist < min_dist:
-                next_node = node
+            if closest_node_name is None or dist < min_dist:
+                closest_node_name = node_name
                 min_dist = dist
-        return next_node
+        return closest_node_name
     
     def navigate(
         self,
@@ -106,13 +104,10 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False '''
-        current_node = self.position_to_node_id(self.position(robot_name))
-        next_node = self.position_to_node_id(pose)
-        logger.info(f"Navigating to pose: {pose} {current_node['props']['name']} {next_node['props']['name']}")
-        
-        current_node_name = current_node["props"]["name"]
-        next_node_name = next_node["props"]["name"]
-        path = calculate_path(self.graph, self.nodes, current_node_name, next_node_name)
+        current_node_name = self.position_to_node_id(self.position(robot_name))
+        next_node_name = self.position_to_node_id(pose)
+        logger.info(f"Navigating to pose: {pose} from {current_node_name} to {next_node_name}")
+        path = calculate_path(self.graph, current_node_name, next_node_name)
 
         logger.info(f"Path: {path}")
         
@@ -123,7 +118,7 @@ class RobotAPI:
         if current_node_name == next_node_name or len(path) == 1:
             return False
         
-        order = create_vda5050_order(self.graph, self.nodes, robot_name, path)
+        order = create_vda5050_order(self.graph, robot_name, path)
         
         if order is None:
             return False
@@ -161,8 +156,7 @@ class RobotAPI:
         # ------------------------ #
         return False
     def _is_reversed_target(self, node):
-        props = node.get("props", {})
-        return props.get('is_parking_spot', False) or props.get('is_charger', False)
+        return node.get('is_parking_spot', False) or node.get('is_charger', False)
 
     def _get_orientation(self, robot_name: str):
         if robot_name in self.robot_orders and len(self.robot_orders[robot_name]["nodes"]) > 1:
@@ -170,8 +164,8 @@ class RobotAPI:
             [cur_node_order, next_node_order] = order["nodes"][:2]
             if cur_node_order["nodeId"] == next_node_order["nodeId"]:
                 return 0
-            cur_node = self.nodes[cur_node_order["nodeId"]]
-            next_node = self.nodes[next_node_order["nodeId"]]
+            cur_node = self.graph.nodes[cur_node_order["nodeId"]]
+            next_node = self.graph.nodes[next_node_order["nodeId"]]
             dx = next_node["x"] - cur_node["x"]
             dy = next_node["y"] - cur_node["y"]
             yaw = math.atan2(dy, dx)
@@ -179,7 +173,7 @@ class RobotAPI:
             if reverse:
                 yaw += math.pi
             return (yaw + math.pi) % (2 * math.pi) - math.pi
-        cur_node = self.nodes[self.robot_states[robot_name]["last_node_id"]]
+        cur_node = self.graph.nodes[self.robot_states[robot_name]["last_node_id"]]
         if self._is_reversed_target(cur_node):
             return math.pi
         return 0
@@ -189,8 +183,8 @@ class RobotAPI:
         if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
             return None
         last_node_id = self.robot_states[robot_name]["last_node_id"]
-        if(last_node_id in self.nodes):
-            node = self.nodes[last_node_id]
+        if last_node_id in self.graph.nodes:
+            node = self.graph.nodes[last_node_id]
             return [node["x"], node["y"], self._get_orientation(robot_name)]
         return None
 

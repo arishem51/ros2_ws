@@ -40,7 +40,6 @@ def calculate_euclidean_distance(node_u: dict, node_v: dict) -> float:
 
 def calculate_path(
     graph: nx.DiGraph,
-    nodes: dict[str, dict],
     start_node_name: str,
     goal_node_name: str
 ) -> list[str] | None:
@@ -49,7 +48,6 @@ def calculate_path(
     
     Args:
         graph: NetworkX DiGraph with nodes and edges
-        nodes: Dictionary of node data indexed by node name
         start_node_name: Name of the starting node
         goal_node_name: Name of the goal node
         
@@ -66,9 +64,9 @@ def calculate_path(
         return None
     
     try:
-        # Create heuristic function using closure to capture nodes
+        # Create heuristic function using closure to capture graph nodes
         def heuristic(u: str, v: str) -> float:
-            return calculate_euclidean_distance(nodes[u], nodes[v])
+            return calculate_euclidean_distance(graph.nodes[u], graph.nodes[v])
         
         # Use A* algorithm with Euclidean distance heuristic
         path = nx.astar_path(
@@ -92,8 +90,8 @@ def calculate_path(
 
 def create_vda5050_edge(
     graph: nx.DiGraph,
-    current_node: dict,
-    next_node: dict,
+    current_node_name: str,
+    next_node_name: str,
     sequence_id: int
 ) -> dict:
     """
@@ -101,19 +99,18 @@ def create_vda5050_edge(
     
     Args:
         graph: NetworkX DiGraph with edge attributes (speed_limit, etc.)
-        current_node: Current node data
-        next_node: Next node data
+        current_node_name: Name of the current node
+        next_node_name: Name of the next node
         sequence_id: Sequence ID for the edge
         
     Returns:
         VDA5050 edge dict
     """
-    next_node_props = next_node["props"]
-    current_node_name = current_node["props"]["name"]
-    next_node_name = next_node_props["name"]
+    current_node = graph.nodes[current_node_name]
+    next_node = graph.nodes[next_node_name]
     
     # Check if this is a backward movement (to charger or parking spot)
-    is_backward = 'is_charger' in next_node_props or 'is_parking_spot' in next_node_props
+    is_backward = next_node.get('is_charger', False) or next_node.get('is_parking_spot', False)
     
     # Determine direction based on coordinate change
     direction = ""
@@ -141,7 +138,6 @@ def create_vda5050_edge(
 
 def create_vda5050_order(
     graph: nx.DiGraph,
-    nodes: dict[str, dict],
     robot_name: str,
     path: list[str]
 ) -> dict | None:
@@ -150,7 +146,6 @@ def create_vda5050_order(
     
     Args:
         graph: NetworkX DiGraph with edge attributes (speed_limit, etc.)
-        nodes: Dictionary of node data indexed by node name
         robot_name: Name of the robot
         path: List of node names representing the path
         
@@ -175,10 +170,8 @@ def create_vda5050_order(
         })
         
         if i + 1 < len(path):
-            current_node = nodes[path[i]]
-            next_node = nodes[path[i + 1]]
             order_edges.append(
-                create_vda5050_edge(graph, current_node, next_node, i * 2 + 1)
+                create_vda5050_edge(graph, path[i], path[i + 1], i * 2 + 1)
             )
     
     order = {
