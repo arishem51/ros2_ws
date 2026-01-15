@@ -53,7 +53,7 @@ class RobotAPI:
         self.mqtt_keepalive = config_yaml['mqtt_keepalive']
         self.timeout = 5.0
         self.debug = False
-        self.robot_states = {}
+        self.robot_state_data = {}
         self.client = mqtt.Client(self.mqtt_client_id)
         self.client.on_message = self.on_message
         self.client.on_connect = self.on_connect
@@ -104,6 +104,7 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False '''
+        logger.info(f"Test {self.position(robot_name)}") 
         current_node_name = self.position_to_node_id(self.position(robot_name))
         next_node_name = self.position_to_node_id(pose)
         logger.info(f"Navigating to pose: {pose} from {current_node_name} to {next_node_name}")
@@ -173,19 +174,17 @@ class RobotAPI:
             if reverse:
                 yaw += math.pi
             return (yaw + math.pi) % (2 * math.pi) - math.pi
-        cur_node = self.graph.nodes[self.robot_states[robot_name]["last_node_id"]]
+        cur_node = self.graph.nodes[self.get_last_node_id(robot_name)]
         if self._is_reversed_target(cur_node):
             return math.pi
         return 0
+
         
 
     def position(self, robot_name: str):
-        if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
-            return None
-        last_node_id = self.robot_states[robot_name]["last_node_id"]
-        if last_node_id in self.graph.nodes:
-            node = self.graph.nodes[last_node_id]
-            return [node["x"], node["y"], self._get_orientation(robot_name)]
+        last_node_id = self.get_last_node_id(robot_name)
+        if last_node_id and (node := self.graph.nodes.get(last_node_id, None)):
+            return [node.get("x", 0), node.get("y", 0), self._get_orientation(robot_name)]
         return None
 
     def battery_soc(self, robot_name: str):
@@ -197,14 +196,14 @@ class RobotAPI:
         return "L1"
 
     def is_command_completed(self, robot_name: str):
-        if self.robot_states.get(robot_name, {}).get("last_node_id", None) == self.prev_robot_des_qr.get(robot_name, None):
+        if self.get_last_node_id(robot_name) == self.prev_robot_des_qr.get(robot_name, None):
                 return True
         if robot_name in self.robot_orders:
-            if robot_name not in self.robot_states or "last_node_id" not in self.robot_states[robot_name]:
+            if self.get_last_node_id(robot_name) is None:
                 return False
                 
             cur_order = self.robot_orders[robot_name]
-            if cur_order["nodes"][-1]["nodeId"] == self.robot_states[robot_name]["last_node_id"]:
+            if cur_order["nodes"][-1]["nodeId"] == self.get_last_node_id(robot_name):
                 del self.robot_orders[robot_name]
                 return True
         return False
@@ -214,49 +213,25 @@ class RobotAPI:
             self.client.subscribe("aubotagv/2.0.0/AUBOT/#")
         else:
             logger.error(f"MQTT connection failed: {rc}")
+    def get_last_node_id(self, robot_name: str):
+        return self.robot_state_data.get(robot_name, {}).get("lastNodeId", None)
+    def get_battery_charge(self, robot_name: str):
+        return self.robot_state_data.get(robot_name, {}).get("batteryState", {}).get("batteryCharge", 0)
     
     def on_message(self, client, userdata, message):
         payload = json.loads(message.payload.decode())
         robot_name = payload["serialNumber"] if payload and "serialNumber" in payload else None
         if robot_name is None:
             return
-        if "batteryState" in payload:
-            battery_soc = payload["batteryState"]["batteryCharge"]
-            self.robot_states[robot_name] = {
-                **self.robot_states.get(robot_name, {}),
-                "battery_soc": battery_soc
-            }
-        if "lastNodeId" in payload:
-            last_node_id = payload["lastNodeId"]
-            self.robot_states[robot_name] = {
-                **self.robot_states.get(robot_name, {}),
-                "last_node_id": last_node_id
-            }
-        if "distanceSinceLastNode" in payload:
-            distance_since_last_node = payload["distanceSinceLastNode"]
-            self.robot_states[robot_name] = {
-                **self.robot_states.get(robot_name, {}),
-                "distance_since_last_node": distance_since_last_node
-            }
-        
-    def get_data(self, robot_name: str):
-        map = self.map(robot_name)
-        position = self.position(robot_name)
-        battery_soc = self.battery_soc(robot_name)
-        if not (map is None or position is None or battery_soc is None):
-            return RobotUpdateData(robot_name, map, position, 1.0)
-        return None
+        if message.topic.endswith("/state"):
+            self.handle_state_message(message.payload.decode())
 
-class RobotUpdateData:
-    ''' Update data for a single robot. '''
-    def __init__(self,
-                 robot_name: str,
-                 map: str,
-                 position: list[float],
-                 battery_soc: float,
-                 requires_replan: bool | None = None):
-        self.robot_name = robot_name
-        self.position = position
-        self.map = map
-        self.battery_soc = battery_soc
-        self.requires_replan = requires_replan
+    def handle_state_message(self, payload):
+        try:
+            msg = json.loads(payload)
+            robot_name = msg.get("serialNumber", None)
+            if robot_name is not None:
+                self.robot_state_data[robot_name] = msg
+        except:
+            return
+        

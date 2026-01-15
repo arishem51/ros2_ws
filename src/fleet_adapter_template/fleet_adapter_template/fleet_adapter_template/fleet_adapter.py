@@ -269,6 +269,14 @@ class RobotAdapter:
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return
+    def get_position(self, last_node_id: str):
+        node = self.api.graph.nodes.get(last_node_id, None)
+        if node is None:
+            return None
+        return [node.get("x", 0), node.get("y", 0), self.api._get_orientation(self.name)]
+
+    def get_battery_soc(self):
+        return self.api.get_battery_charge(self.name) / 100.0
 
 
 def ros_connections(node, robots, fleet_handle):
@@ -340,13 +348,14 @@ def parallel(f):
 
 @parallel
 def update_robot(robot: RobotAdapter):
-    data = robot.api.get_data(robot.name)
-    if data is None:
+    position = robot.get_position(robot.api.get_last_node_id(robot.name))
+    battery_soc = robot.get_battery_soc()
+    if position is None or battery_soc is None:
         return
     state = rmf_easy.RobotState(
-        data.map,
-        data.position,
-        data.battery_soc
+        "L1",
+        position,
+        battery_soc
     )
 
     if robot.update_handle is None:
