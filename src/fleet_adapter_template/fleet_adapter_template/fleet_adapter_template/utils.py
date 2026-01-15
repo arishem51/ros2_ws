@@ -181,3 +181,13 @@ def create_vda5050_order(
 
 def is_reversed_node(node: dict) -> bool:
     return node.get("is_parking_spot", False) or node.get("is_charger", False)
+
+
+def calculate_yaw(x1, y1, x2, y2, reverse=False):
+    dx = x2 - x1
+    dy = y2 - y1
+    yaw = math.atan2(dy, dx)
+    if reverse:
+        yaw += math.pi
+    yaw = (yaw + math.pi) % (2 * math.pi) - math.pi
+    return yaw

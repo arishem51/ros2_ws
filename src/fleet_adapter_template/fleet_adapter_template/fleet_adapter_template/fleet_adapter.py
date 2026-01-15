@@ -31,7 +31,7 @@ import rmf_adapter.easy_full_control as rmf_easy
 import logging
 import networkx as nx
 from .RobotClientAPI import RobotAPI
-from .utils import is_reversed_node, calculate_path
+from .utils import calculate_yaw, is_reversed_node, calculate_path
 
 from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSHistoryPolicy as History
@@ -324,13 +324,13 @@ class RobotAdapter:
                 next_node = self.api.graph.nodes.get(next_node_id, None)
                 if cur_node is None or next_node is None:
                     return self.prev_theta
-                dx = next_node["x"] - cur_node["x"]
-                dy = next_node["y"] - cur_node["y"]
-                yaw = math.atan2(dy, dx)
-                reverse = is_reversed_node(next_node)
-                if reverse:
-                    yaw += math.pi
-                yaw = (yaw + math.pi) % (2 * math.pi) - math.pi
+                yaw = calculate_yaw(
+                    cur_node["x"],
+                    cur_node["y"],
+                    next_node["x"],
+                    next_node["y"],
+                    is_reversed_node(next_node),
+                )
                 self.prev_theta = yaw
                 return yaw
         if is_reversed_node(cur_node):
