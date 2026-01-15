@@ -143,6 +143,9 @@ class RobotAPI:
     def get_last_node_id(self, robot_name: str):
         return self.robot_state_data.get(robot_name, {}).get("lastNodeId", None)
 
+    def get_node_states(self, robot_name: str):
+        return self.robot_state_data.get(robot_name, {}).get("nodeStates", None)
+
     def get_battery_charge(self, robot_name: str):
         return (
             self.robot_state_data.get(robot_name, {})

@@ -56,6 +56,7 @@ def load_navigation_graph(nav_graph_path: str) -> nx.DiGraph:
         for idx, vertex in enumerate(vertices):
             x, y, props = vertex
             name = props.get("name", f"qr_{idx}").replace("qr_", "")
+            logger.info(f"Node: {name} {props}")
             graph.add_node(name, x=x, y=y, **props)
 
         for idx, lane in enumerate(lanes):
@@ -311,29 +312,28 @@ class RobotAdapter:
         return
 
     def get_orientation(self):
-        robot_name = self.name
-        robot_order = self.api.get_robot_order(robot_name)
-        if robot_order is not None and len(robot_order["nodes"]) > 1:
-            [cur_node_order, next_node_order] = robot_order["nodes"][:2]
-            cur_qr = cur_node_order["nodeId"]
-            next_qr = next_node_order["nodeId"]
-            if cur_qr == next_qr:
-                return self.prev_theta
-            cur_node = self.api.graph.nodes.get(cur_qr, None)
-            next_node = self.api.graph.nodes.get(next_qr, None)
-            if cur_node is None or next_node is None:
-                return self.prev_theta
-            dx = next_node["x"] - cur_node["x"]
-            dy = next_node["y"] - cur_node["y"]
-            yaw = math.atan2(dy, dx)
-            reverse = is_reversed_node(next_node)
-            if reverse:
-                yaw += math.pi
-            yaw = (yaw + math.pi) % (2 * math.pi) - math.pi
-            self.prev_theta = yaw
-            return yaw
-        cur_node = self.api.graph.nodes.get(self.api.get_last_node_id(robot_name), None)
-        if cur_node is not None and is_reversed_node(cur_node):
+        last_node_id = self.api.get_last_node_id(self.name)
+        if last_node_id is not None:
+            next_node_id = None
+            node_states = self.api.get_node_states(self.name)
+            cur_node = self.api.graph.nodes.get(last_node_id, None)
+            if node_states is not None and len(node_states) > 0:
+                next_node_id = node_states[0]["nodeId"]
+                if next_node_id == last_node_id and len(node_states) > 1:
+                    next_node_id = node_states[1]["nodeId"]
+                next_node = self.api.graph.nodes.get(next_node_id, None)
+                if cur_node is None or next_node is None:
+                    return self.prev_theta
+                dx = next_node["x"] - cur_node["x"]
+                dy = next_node["y"] - cur_node["y"]
+                yaw = math.atan2(dy, dx)
+                reverse = is_reversed_node(next_node)
+                if reverse:
+                    yaw += math.pi
+                yaw = (yaw + math.pi) % (2 * math.pi) - math.pi
+                self.prev_theta = yaw
+                return yaw
+        if is_reversed_node(cur_node):
             self.prev_theta = math.pi
             return math.pi
         return self.prev_theta
@@ -342,7 +342,8 @@ class RobotAdapter:
         node = self.api.graph.nodes.get(last_node_id, None)
         if node is None:
             return None
-        return [node.get("x", 0), node.get("y", 0), self.get_orientation()]
+        orientation = self.get_orientation()
+        return [node.get("x", 0), node.get("y", 0), orientation]
 
     def get_battery_soc(self):
         return self.api.get_battery_charge(self.name) / 100.0
