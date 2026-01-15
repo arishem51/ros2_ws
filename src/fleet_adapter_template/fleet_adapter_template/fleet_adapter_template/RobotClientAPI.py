@@ -13,20 +13,19 @@
 # limitations under the License.
 
 
-'''
-    The RobotAPI class is a wrapper for API calls to the robot. Here users
-    are expected to fill up the implementations of functions which will be used
-    by the RobotCommandHandle. For example, if your robot has a REST API, you
-    will need to make http request calls to the appropriate endpoints within
-    these functions.
-'''
+"""
+The RobotAPI class is a wrapper for API calls to the robot. Here users
+are expected to fill up the implementations of functions which will be used
+by the RobotCommandHandle. For example, if your robot has a REST API, you
+will need to make http request calls to the appropriate endpoints within
+these functions.
+"""
 
 import json
 import logging
-import math
 import networkx as nx
 import paho.mqtt.client as mqtt
-from .utils import calculate_path, create_vda5050_order
+from .utils import create_vda5050_order
 
 logger = logging.getLogger(__name__)
 
@@ -36,21 +35,14 @@ class RobotAPI:
     # http requests. Users should modify the constructor as per the
     # requirements of their robot's API
     def __init__(self, config_yaml, graph: nx.DiGraph):
-        """
-        Initialize RobotAPI with configuration and navigation graph.
-        
-        Args:
-            config_yaml: Configuration dictionary with MQTT settings
-            graph: NetworkX DiGraph representing the navigation graph
-        """
-        self.mqtt_broker = config_yaml['mqtt_broker']
-        self.mqtt_topic = config_yaml['mqtt_topic']
-        self.mqtt_client_id = config_yaml['mqtt_client_id']
-        self.mqtt_username = config_yaml['mqtt_username']
-        self.mqtt_password = config_yaml['mqtt_password']
-        self.mqtt_qos = config_yaml['mqtt_qos']
-        self.mqtt_retain = config_yaml['mqtt_retain']
-        self.mqtt_keepalive = config_yaml['mqtt_keepalive']
+        self.mqtt_broker = config_yaml["mqtt_broker"]
+        self.mqtt_topic = config_yaml["mqtt_topic"]
+        self.mqtt_client_id = config_yaml["mqtt_client_id"]
+        self.mqtt_username = config_yaml["mqtt_username"]
+        self.mqtt_password = config_yaml["mqtt_password"]
+        self.mqtt_qos = config_yaml["mqtt_qos"]
+        self.mqtt_retain = config_yaml["mqtt_retain"]
+        self.mqtt_keepalive = config_yaml["mqtt_keepalive"]
         self.timeout = 5.0
         self.debug = False
         self.robot_state_data = {}
@@ -62,7 +54,7 @@ class RobotAPI:
         self.client.loop_start()
         self.robot_orders = {}
         self.prev_robot_des_qr = {}
-        
+
         self.graph = graph
 
     def check_connection(self):
@@ -74,35 +66,29 @@ class RobotAPI:
         pose,
         map_name: str,
     ):
-        ''' Request the robot to localize on target map. This 
-            function should return True if the robot has accepted the 
-            request, else False '''
+        """Request the robot to localize on target map. This
+        function should return True if the robot has accepted the
+        request, else False"""
         # ------------------------ #
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return False
-    
-    def navigate(
-        self,
-        robot_name: str,
-        path,
-        map_name: str,
-        speed_limit=0.0
-    ):
+
+    def navigate(self, robot_name: str, path, map_name: str, speed_limit=0.0):
         if path is None or len(path) == 0:
             return False
-        
+
         next_qr = path[-1]
         self.prev_robot_des_qr[robot_name] = next_qr
-        
-        if self.get_last_node_id(robot_name) == next_qr or len(path) == 1:
-            return False
-        
+
+        if self.get_last_node_id(robot_name) == next_qr and len(path) == 1:
+            return True
+
         order = create_vda5050_order(self.graph, robot_name, path)
-        
+
         if order is None:
             return False
-        
+
         topic = f"{self.mqtt_topic}/{robot_name}/order"
         try:
             self.client.publish(topic, json.dumps(order))
@@ -111,68 +97,37 @@ class RobotAPI:
         except Exception as e:
             logger.error(f"Failed to publish order: {e}")
             return False
-    
-    def start_activity(
-        self,
-        robot_name: str,
-        activity: str,
-        label: str
-    ):
-        ''' Request the robot to begin a process. This is specific to the robot
+
+    def start_activity(self, robot_name: str, activity: str, label: str):
+        """Request the robot to begin a process. This is specific to the robot
         and the use case. For example, load/unload a cart for Deliverybot
         or begin cleaning a zone for a cleaning robot.
         Return True if process has started/is queued successfully, else
-        return False '''
+        return False"""
         # ------------------------ #
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return False
 
     def stop(self, robot_name: str):
-        ''' Command the robot to stop.
-            Return True if robot has successfully stopped. Else False. '''
+        """Command the robot to stop.
+        Return True if robot has successfully stopped. Else False."""
         # ------------------------ #
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return False
-    def _is_reversed_target(self, node):
-        return node.get('is_parking_spot', False) or node.get('is_charger', False)
 
-    def get_orientation(self, robot_name: str):
-        if robot_name in self.robot_orders and len(self.robot_orders[robot_name]["nodes"]) > 1:
-            order = self.robot_orders[robot_name]
-            [cur_node_order, next_node_order] = order["nodes"][:2]
-            if cur_node_order["nodeId"] == next_node_order["nodeId"]:
-                return 0
-            cur_node = self.graph.nodes[cur_node_order["nodeId"]]
-            next_node = self.graph.nodes[next_node_order["nodeId"]]
-            dx = next_node["x"] - cur_node["x"]
-            dy = next_node["y"] - cur_node["y"]
-            yaw = math.atan2(dy, dx)
-            reverse = self._is_reversed_target(next_node)
-            if reverse:
-                yaw += math.pi
-            return (yaw + math.pi) % (2 * math.pi) - math.pi
-        cur_node = self.graph.nodes[self.get_last_node_id(robot_name)]
-        if self._is_reversed_target(cur_node):
-            return math.pi
-        return 0
-
-    def battery_soc(self, robot_name: str):
-        if robot_name not in self.robot_states or "battery_soc" not in self.robot_states[robot_name]:
-            return 1.0
-        return self.robot_states[robot_name]["battery_soc"] / 100.0
-
-    def map(self, robot_name: str):
-        return "L1"
+    def get_robot_order(self, robot_name: str):
+        return self.robot_orders.get(robot_name, None)
 
     def is_command_completed(self, robot_name: str):
-        if self.get_last_node_id(robot_name) == self.prev_robot_des_qr.get(robot_name, None):
-                return True
+        if self.get_last_node_id(robot_name) == self.prev_robot_des_qr.get(
+            robot_name, None
+        ):
+            return True
         if robot_name in self.robot_orders:
             if self.get_last_node_id(robot_name) is None:
                 return False
-                
             cur_order = self.robot_orders[robot_name]
             if cur_order["nodes"][-1]["nodeId"] == self.get_last_node_id(robot_name):
                 del self.robot_orders[robot_name]
@@ -184,14 +139,22 @@ class RobotAPI:
             self.client.subscribe("aubotagv/2.0.0/AUBOT/#")
         else:
             logger.error(f"MQTT connection failed: {rc}")
+
     def get_last_node_id(self, robot_name: str):
         return self.robot_state_data.get(robot_name, {}).get("lastNodeId", None)
+
     def get_battery_charge(self, robot_name: str):
-        return self.robot_state_data.get(robot_name, {}).get("batteryState", {}).get("batteryCharge", 0)
-    
+        return (
+            self.robot_state_data.get(robot_name, {})
+            .get("batteryState", {})
+            .get("batteryCharge", 0)
+        )
+
     def on_message(self, client, userdata, message):
         payload = json.loads(message.payload.decode())
-        robot_name = payload["serialNumber"] if payload and "serialNumber" in payload else None
+        robot_name = (
+            payload["serialNumber"] if payload and "serialNumber" in payload else None
+        )
         if robot_name is None:
             return
         if message.topic.endswith("/state"):
@@ -203,6 +166,6 @@ class RobotAPI:
             robot_name = msg.get("serialNumber", None)
             if robot_name is not None:
                 self.robot_state_data[robot_name] = msg
-        except:
+        except Exception as e:
+            logger.error(f"Failed to handle state message: {e}")
             return
-        

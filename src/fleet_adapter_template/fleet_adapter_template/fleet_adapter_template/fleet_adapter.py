@@ -31,44 +31,54 @@ import rmf_adapter.easy_full_control as rmf_easy
 import logging
 import networkx as nx
 from .RobotClientAPI import RobotAPI, calculate_path
+from .utils import is_reversed_node
 
 from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSHistoryPolicy as History
-from rclpy.qos import QoSProfile
 from rclpy.qos import QoSReliabilityPolicy as Reliability
 
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(asctime)s %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="[%(levelname)s] %(asctime)s %(message)s"
+)
 
 logger = logging.getLogger(__name__)
 
 
 def load_navigation_graph(nav_graph_path: str) -> nx.DiGraph:
     graph = nx.DiGraph()
-    
-    with open(nav_graph_path, 'r') as f:
+
+    with open(nav_graph_path, "r") as f:
         graph_data = yaml.safe_load(f)
-        vertices = graph_data['levels']['L1']['vertices']
-        lanes = graph_data['levels']['L1']['lanes']
-        
+        vertices = graph_data["levels"]["L1"]["vertices"]
+        lanes = graph_data["levels"]["L1"]["lanes"]
+
         # First pass: create nodes with coordinates
         for idx, vertex in enumerate(vertices):
             x, y, props = vertex
-            name = props.get('name', f'qr_{idx}').replace('qr_', '')
+            name = props.get("name", f"qr_{idx}").replace("qr_", "")
             graph.add_node(name, x=x, y=y, **props)
-        
+
         for idx, lane in enumerate(lanes):
-            u_idx, v_idx, lane_props = lane[0], lane[1], lane[2] if len(lane) > 2 else {}
-            u = vertices[u_idx][2].get("name", f'qr_{u_idx}').replace('qr_', '')
-            v = vertices[v_idx][2].get("name", f'qr_{v_idx}').replace('qr_', '')
-            
+            u_idx, v_idx, lane_props = (
+                lane[0],
+                lane[1],
+                lane[2] if len(lane) > 2 else {},
+            )
+            u = vertices[u_idx][2].get("name", f"qr_{u_idx}").replace("qr_", "")
+            v = vertices[v_idx][2].get("name", f"qr_{v_idx}").replace("qr_", "")
+
             u_node = graph.nodes[u]
             v_node = graph.nodes[v]
-            distance = math.sqrt((u_node["x"] - v_node["x"])**2 + (u_node["y"] - v_node["y"])**2)
-            
+            distance = math.sqrt(
+                (u_node["x"] - v_node["x"]) ** 2 + (u_node["y"] - v_node["y"]) ** 2
+            )
+
             speed_limit = lane_props.get("speed_limit", 12)
             graph.add_edge(u, v, weight=distance, speed_limit=speed_limit)
-    
-    logger.info(f"Loaded navigation graph with {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges")
+
+    logger.info(
+        f"Loaded navigation graph with {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges"
+    )
     return graph
 
 
@@ -82,18 +92,37 @@ def main(argv=sys.argv):
     args_without_ros = rclpy.utilities.remove_ros_args(argv)
 
     parser = argparse.ArgumentParser(
-        prog="fleet_adapter",
-        description="Configure and spin up the fleet adapter")
-    parser.add_argument("-c", "--config_file", type=str, required=True,
-                        help="Path to the config.yaml file")
-    parser.add_argument("-n", "--nav_graph", type=str, required=True,
-                        help="Path to the nav_graph for this fleet adapter")
-    parser.add_argument("-s", "--server_uri", type=str, required=False, default="",
-                        help="URI of the api server to transmit state and task information.")
-    parser.add_argument("-sim", "--use_sim_time", action="store_true",
-                        help='Use sim time, default: false')
+        prog="fleet_adapter", description="Configure and spin up the fleet adapter"
+    )
+    parser.add_argument(
+        "-c",
+        "--config_file",
+        type=str,
+        required=True,
+        help="Path to the config.yaml file",
+    )
+    parser.add_argument(
+        "-n",
+        "--nav_graph",
+        type=str,
+        required=True,
+        help="Path to the nav_graph for this fleet adapter",
+    )
+    parser.add_argument(
+        "-s",
+        "--server_uri",
+        type=str,
+        required=False,
+        default="",
+        help="URI of the api server to transmit state and task information.",
+    )
+    parser.add_argument(
+        "-sim",
+        "--use_sim_time",
+        action="store_true",
+        help="Use sim time, default: false",
+    )
     args = parser.parse_args(args_without_ros[1:])
-    print(f"Starting fleet adapter...")
 
     config_path = args.config_file
     nav_graph_path = args.nav_graph
@@ -101,7 +130,7 @@ def main(argv=sys.argv):
     fleet_config = rmf_easy.FleetConfiguration.from_config_files(
         config_path, nav_graph_path
     )
-    assert fleet_config, f'Failed to parse config file [{config_path}]'
+    assert fleet_config, f"Failed to parse config file [{config_path}]"
 
     # Parse the yaml in Python to get the fleet_manager info
     with open(config_path, "r") as f:
@@ -109,17 +138,16 @@ def main(argv=sys.argv):
 
     # ROS 2 node for the command handle
     fleet_name = fleet_config.fleet_name
-    node = rclpy.node.Node(f'{fleet_name}_command_handle')
-    adapter = Adapter.make(f'{fleet_name}_fleet_adapter')
+    node = rclpy.node.Node(f"{fleet_name}_command_handle")
+    adapter = Adapter.make(f"{fleet_name}_fleet_adapter")
     assert adapter, (
-        'Unable to initialize fleet adapter. '
-        'Please ensure RMF Schedule Node is running'
+        "Unable to initialize fleet adapter. Please ensure RMF Schedule Node is running"
     )
 
     adapter.start()
     time.sleep(1.0)
 
-    if args.server_uri == '':
+    if args.server_uri == "":
         server_uri = None
     else:
         server_uri = args.server_uri
@@ -130,7 +158,7 @@ def main(argv=sys.argv):
 
     graph = load_navigation_graph(nav_graph_path)
 
-    fleet_mgr_yaml = config_yaml['fleet_manager']
+    fleet_mgr_yaml = config_yaml["fleet_manager"]
     api = RobotAPI(fleet_mgr_yaml, graph)
 
     robots = {}
@@ -140,8 +168,8 @@ def main(argv=sys.argv):
             robot_name, robot_config, node, api, fleet_handle
         )
 
-    update_period = 1.0/config_yaml['rmf_fleet'].get(
-        'robot_state_update_frequency', 10.0
+    update_period = 1.0 / config_yaml["rmf_fleet"].get(
+        "robot_state_update_frequency", 10.0
     )
 
     def update_loop():
@@ -149,12 +177,10 @@ def main(argv=sys.argv):
         next_wakeup = time.monotonic()
         loop = asyncio.get_event_loop()
         while rclpy.ok():
-            
             jobs = [update_robot(r) for r in robots.values()]
             loop.run_until_complete(asyncio.gather(*jobs))
             next_wakeup += update_period
             sleep_time = next_wakeup - time.monotonic()
-                        
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
@@ -175,14 +201,7 @@ def main(argv=sys.argv):
 
 
 class RobotAdapter:
-    def __init__(
-        self,
-        name: str,
-        configuration,
-        node,
-        api: RobotAPI,
-        fleet_handle
-    ):
+    def __init__(self, name: str, configuration, node, api: RobotAPI, fleet_handle):
         self.name = name
         self.execution = None
         self.update_handle = None
@@ -190,6 +209,7 @@ class RobotAdapter:
         self.node = node
         self.api = api
         self.fleet_handle = fleet_handle
+        self.prev_theta = 0
 
     def update(self, state):
         activity_identifier = None
@@ -205,13 +225,11 @@ class RobotAdapter:
 
     def make_callbacks(self):
         callbacks = rmf_easy.RobotCallbacks(
-            lambda destination, execution: self.navigate(
-                destination, execution
-            ),
+            lambda destination, execution: self.navigate(destination, execution),
             lambda activity: self.stop(activity),
             lambda category, description, execution: self.execute_action(
                 category, description, execution
-            )
+            ),
         )
 
         callbacks.localize = lambda estimate, execution: self.localize(
@@ -222,26 +240,25 @@ class RobotAdapter:
 
     def localize(self, estimate, execution):
         self.node.get_logger().info(
-            f'Commanding [{self.name}] to change map to'
-            f' [{estimate.map}]'
+            f"Commanding [{self.name}] to change map to [{estimate.map}]"
         )
         if self.api.localize(self.name, estimate.position, estimate.map):
             self.node.get_logger().info(
-                f'Localized [{self.name}] on {estimate.map} '
-                f'at position [{estimate.position}]'
+                f"Localized [{self.name}] on {estimate.map} "
+                f"at position [{estimate.position}]"
             )
             execution.finished()
         else:
             self.node.get_logger().warn(
-                f'Failed to localize [{self.name}] on {estimate.map} '
-                f'at position [{estimate.position}]. Requesting replanning...'
+                f"Failed to localize [{self.name}] on {estimate.map} "
+                f"at position [{estimate.position}]. Requesting replanning..."
             )
             if self.update_handle is not None and self.update_handle.more() is not None:
                 self.update_handle.more().replan()
 
     def pose_to_qr(self, position):
         closest_qr = None
-        min_dist = float('inf')
+        min_dist = float("inf")
         for qr in self.api.graph.nodes:
             node = self.api.graph.nodes[qr]
             x, y = node["x"], node["y"]
@@ -250,28 +267,31 @@ class RobotAdapter:
                 closest_qr = qr
                 min_dist = dist
         return closest_qr
-    
+
     def get_pose(self):
         robot_name = self.name
         last_node_id = self.api.get_last_node_id(robot_name)
         if last_node_id and (node := self.api.graph.nodes.get(last_node_id, None)):
-            return [node.get("x", 0), node.get("y", 0), self.api.get_orientation(robot_name)]
+            return [
+                node.get("x", 0),
+                node.get("y", 0),
+                self.get_orientation(),
+            ]
         return None
 
     def navigate(self, destination, execution):
         self.execution = execution
         self.node.get_logger().info(
-            f'Commanding [{self.name}] to navigate to {destination.position} '
-            f'on map [{destination.map}]'
+            f"Commanding [{self.name}] to navigate to {destination.position} "
+            f"on map [{destination.map}]"
         )
 
-        path = calculate_path(self.api.graph, self.pose_to_qr(self.get_pose()), self.pose_to_qr(destination.position))
-        self.api.navigate(
-            self.name,
-            path,
-            destination.map,
-            destination.speed_limit
+        path = calculate_path(
+            self.api.graph,
+            self.pose_to_qr(self.get_pose()),
+            self.pose_to_qr(destination.position),
         )
+        self.api.navigate(self.name, path, destination.map, destination.speed_limit)
 
     def stop(self, activity):
         execution = self.execution
@@ -281,19 +301,48 @@ class RobotAdapter:
                 self.api.stop(self.name)
 
     def execute_action(self, category: str, description: dict, execution):
-        ''' Trigger a custom action you would like your robot to perform.
+        """Trigger a custom action you would like your robot to perform.
         You may wish to use RobotAPI.start_activity to trigger different
-        types of actions to your robot.'''
+        types of actions to your robot."""
         self.execution = execution
         # ------------------------ #
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return
+
+    def get_orientation(self):
+        robot_name = self.name
+        robot_order = self.api.get_robot_order(robot_name)
+        if robot_order is not None and len(robot_order["nodes"]) > 1:
+            [cur_node_order, next_node_order] = robot_order["nodes"][:2]
+            cur_qr = cur_node_order["nodeId"]
+            next_qr = next_node_order["nodeId"]
+            if cur_qr == next_qr:
+                return self.prev_theta
+            cur_node = self.api.graph.nodes.get(cur_qr, None)
+            next_node = self.api.graph.nodes.get(next_qr, None)
+            if cur_node is None or next_node is None:
+                return self.prev_theta
+            dx = next_node["x"] - cur_node["x"]
+            dy = next_node["y"] - cur_node["y"]
+            yaw = math.atan2(dy, dx)
+            reverse = is_reversed_node(next_node)
+            if reverse:
+                yaw += math.pi
+            yaw = (yaw + math.pi) % (2 * math.pi) - math.pi
+            self.prev_theta = yaw
+            return yaw
+        cur_node = self.api.graph.nodes.get(self.api.get_last_node_id(robot_name), None)
+        if cur_node is not None and is_reversed_node(cur_node):
+            self.prev_theta = math.pi
+            return math.pi
+        return self.prev_theta
+
     def get_position(self, last_node_id: str):
         node = self.api.graph.nodes.get(last_node_id, None)
         if node is None:
             return None
-        return [node.get("x", 0), node.get("y", 0), self.api.get_orientation(self.name)]
+        return [node.get("x", 0), node.get("y", 0), self.get_orientation()]
 
     def get_battery_soc(self):
         return self.api.get_battery_charge(self.name) / 100.0
@@ -309,23 +358,21 @@ def ros_connections(node, robots, fleet_handle):
     )
 
     close_lanes_pub = node.create_publisher(
-        ClosedLanes,
-        'closed_lanes',
-        qos_profile=transeint_qos
+        ClosedLanes, "closed_lanes", qos_profile=transeint_qos
     )
 
     closed_lanes = set()
 
     def lane_request_cb(msg):
         if msg.fleet_name and msg.fleet_name != fleet_name:
-            print(f'Ignoring lane request for fleet [{msg.fleet_name}]')
+            print(f"Ignoring lane request for fleet [{msg.fleet_name}]")
             return
 
         if msg.open_lanes:
-            print(f'Opening lanes: {msg.open_lanes}')
+            print(f"Opening lanes: {msg.open_lanes}")
 
         if msg.close_lanes:
-            print(f'Closing lanes: {msg.close_lanes}')
+            print(f"Closing lanes: {msg.close_lanes}")
 
         fleet_handle.more().open_lanes(msg.open_lanes)
         fleet_handle.more().close_lanes(msg.close_lanes)
@@ -343,11 +390,11 @@ def ros_connections(node, robots, fleet_handle):
 
     lane_request_sub = node.create_subscription(
         LaneRequest,
-        'lane_closure_requests',
+        "lane_closure_requests",
         lane_request_cb,
         qos_profile=qos_profile_system_default,
     )
-    
+
     return [
         lane_request_sub,
     ]
@@ -359,9 +406,7 @@ def ros_connections(node, robots, fleet_handle):
 # https://stackoverflow.com/a/59385935
 def parallel(f):
     def run_in_parallel(*args, **kwargs):
-        return asyncio.get_event_loop().run_in_executor(
-            None, f, *args, **kwargs
-        )
+        return asyncio.get_event_loop().run_in_executor(None, f, *args, **kwargs)
 
     return run_in_parallel
 
@@ -372,23 +417,16 @@ def update_robot(robot: RobotAdapter):
     battery_soc = robot.get_battery_soc()
     if position is None or battery_soc is None:
         return
-    state = rmf_easy.RobotState(
-        "L1",
-        position,
-        battery_soc
-    )
+    state = rmf_easy.RobotState("L1", position, battery_soc)
 
     if robot.update_handle is None:
         robot.update_handle = robot.fleet_handle.add_robot(
-            robot.name,
-            state,
-            robot.configuration,
-            robot.make_callbacks()
+            robot.name, state, robot.configuration, robot.make_callbacks()
         )
         return
 
     robot.update(state)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)
