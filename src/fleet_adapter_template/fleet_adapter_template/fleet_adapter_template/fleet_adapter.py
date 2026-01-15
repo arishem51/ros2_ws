@@ -30,7 +30,7 @@ from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
 import logging
 import networkx as nx
-from .RobotClientAPI import RobotAPI
+from .RobotClientAPI import RobotAPI, calculate_path
 
 from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSHistoryPolicy as History
@@ -239,6 +239,25 @@ class RobotAdapter:
             if self.update_handle is not None and self.update_handle.more() is not None:
                 self.update_handle.more().replan()
 
+    def pose_to_qr(self, position):
+        closest_qr = None
+        min_dist = float('inf')
+        for qr in self.api.graph.nodes:
+            node = self.api.graph.nodes[qr]
+            x, y = node["x"], node["y"]
+            dist = math.hypot(x - position[0], y - position[1])
+            if closest_qr is None or dist < min_dist:
+                closest_qr = qr
+                min_dist = dist
+        return closest_qr
+    
+    def get_pose(self):
+        robot_name = self.name
+        last_node_id = self.api.get_last_node_id(robot_name)
+        if last_node_id and (node := self.api.graph.nodes.get(last_node_id, None)):
+            return [node.get("x", 0), node.get("y", 0), self.api.get_orientation(robot_name)]
+        return None
+
     def navigate(self, destination, execution):
         self.execution = execution
         self.node.get_logger().info(
@@ -246,9 +265,10 @@ class RobotAdapter:
             f'on map [{destination.map}]'
         )
 
+        path = calculate_path(self.api.graph, self.pose_to_qr(self.get_pose()), self.pose_to_qr(destination.position))
         self.api.navigate(
             self.name,
-            destination.position,
+            path,
             destination.map,
             destination.speed_limit
         )
@@ -273,7 +293,7 @@ class RobotAdapter:
         node = self.api.graph.nodes.get(last_node_id, None)
         if node is None:
             return None
-        return [node.get("x", 0), node.get("y", 0), self.api._get_orientation(self.name)]
+        return [node.get("x", 0), node.get("y", 0), self.api.get_orientation(self.name)]
 
     def get_battery_soc(self):
         return self.api.get_battery_charge(self.name) / 100.0

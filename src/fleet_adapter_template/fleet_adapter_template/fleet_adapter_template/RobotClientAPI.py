@@ -81,42 +81,21 @@ class RobotAPI:
         # IMPLEMENT YOUR CODE HERE #
         # ------------------------ #
         return False
-    def position_to_node_id(self, position):
-        closest_node_name = None
-        min_dist = float('inf')
-        for node_name in self.graph.nodes:
-            node = self.graph.nodes[node_name]
-            x, y = node["x"], node["y"]
-            dist = math.hypot(x - position[0], y - position[1])
-            if closest_node_name is None or dist < min_dist:
-                closest_node_name = node_name
-                min_dist = dist
-        return closest_node_name
     
     def navigate(
         self,
         robot_name: str,
-        pose,
+        path,
         map_name: str,
         speed_limit=0.0
     ):
-        ''' Request the robot to navigate to pose:[x,y,theta] where x, y and
-            and theta are in the robot's coordinate convention. This function
-            should return True if the robot has accepted the request,
-            else False '''
-        logger.info(f"Test {self.position(robot_name)}") 
-        current_node_name = self.position_to_node_id(self.position(robot_name))
-        next_node_name = self.position_to_node_id(pose)
-        logger.info(f"Navigating to pose: {pose} from {current_node_name} to {next_node_name}")
-        path = calculate_path(self.graph, current_node_name, next_node_name)
-
-        logger.info(f"Path: {path}")
-        
-        if path is None:
+        if path is None or len(path) == 0:
             return False
         
-        self.prev_robot_des_qr[robot_name] = next_node_name
-        if current_node_name == next_node_name or len(path) == 1:
+        next_qr = path[-1]
+        self.prev_robot_des_qr[robot_name] = next_qr
+        
+        if self.get_last_node_id(robot_name) == next_qr or len(path) == 1:
             return False
         
         order = create_vda5050_order(self.graph, robot_name, path)
@@ -159,7 +138,7 @@ class RobotAPI:
     def _is_reversed_target(self, node):
         return node.get('is_parking_spot', False) or node.get('is_charger', False)
 
-    def _get_orientation(self, robot_name: str):
+    def get_orientation(self, robot_name: str):
         if robot_name in self.robot_orders and len(self.robot_orders[robot_name]["nodes"]) > 1:
             order = self.robot_orders[robot_name]
             [cur_node_order, next_node_order] = order["nodes"][:2]
@@ -178,14 +157,6 @@ class RobotAPI:
         if self._is_reversed_target(cur_node):
             return math.pi
         return 0
-
-        
-
-    def position(self, robot_name: str):
-        last_node_id = self.get_last_node_id(robot_name)
-        if last_node_id and (node := self.graph.nodes.get(last_node_id, None)):
-            return [node.get("x", 0), node.get("y", 0), self._get_orientation(robot_name)]
-        return None
 
     def battery_soc(self, robot_name: str):
         if robot_name not in self.robot_states or "battery_soc" not in self.robot_states[robot_name]:

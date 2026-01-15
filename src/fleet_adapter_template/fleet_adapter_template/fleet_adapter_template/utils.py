@@ -38,6 +38,9 @@ def calculate_euclidean_distance(node_u: dict, node_v: dict) -> float:
     return math.sqrt(dx * dx + dy * dy)
 
 
+def heuristic(u: str, v: str, graph: nx.DiGraph) -> float:
+            return calculate_euclidean_distance(graph.nodes[u], graph.nodes[v])
+
 def calculate_path(
     graph: nx.DiGraph,
     start_node_name: str,
@@ -64,16 +67,14 @@ def calculate_path(
         return None
     
     try:
-        # Create heuristic function using closure to capture graph nodes
-        def heuristic(u: str, v: str) -> float:
-            return calculate_euclidean_distance(graph.nodes[u], graph.nodes[v])
+        h = lambda u, v: calculate_euclidean_distance(graph.nodes[u], graph.nodes[v])
         
         # Use A* algorithm with Euclidean distance heuristic
         path = nx.astar_path(
             graph,
             start_node_name,
             goal_node_name,
-            heuristic=heuristic,
+            heuristic=h,
             weight='weight'
         )
         logger.info(f"Path from {start_node_name} to {goal_node_name}: {path}")
