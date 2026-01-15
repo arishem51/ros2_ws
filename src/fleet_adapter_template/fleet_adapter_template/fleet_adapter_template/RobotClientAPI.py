@@ -159,6 +159,18 @@ class RobotAPI:
             return
         if message.topic.endswith("/state"):
             self.handle_state_message(message.payload.decode())
+        elif message.topic.endswith("/order"):
+            self.handle_order_message(message.payload.decode())
+
+    def handle_order_message(self, payload):
+        try:
+            msg = json.loads(payload)
+            robot_name = msg.get("serialNumber", None)
+            if robot_name is not None:
+                self.robot_orders[robot_name] = msg
+        except Exception as e:
+            logger.error(f"Failed to handle order message: {e}")
+            return
 
     def handle_state_message(self, payload):
         try:

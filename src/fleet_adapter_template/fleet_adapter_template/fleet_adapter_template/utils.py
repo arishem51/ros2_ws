@@ -67,11 +67,13 @@ def calculate_path(
         return None
 
     try:
-        h = lambda u, v: calculate_euclidean_distance(graph.nodes[u], graph.nodes[v])
-
         # Use A* algorithm with Euclidean distance heuristic
         path = nx.astar_path(
-            graph, start_node_name, goal_node_name, heuristic=h, weight="weight"
+            graph,
+            start_node_name,
+            goal_node_name,
+            heuristic=lambda u, v: heuristic(u, v, graph),
+            weight="weight",
         )
         logger.info(f"Path from {start_node_name} to {goal_node_name}: {path}")
         return path
@@ -104,10 +106,7 @@ def create_vda5050_edge(
     current_node = graph.nodes[current_node_name]
     next_node = graph.nodes[next_node_name]
 
-    # Check if this is a backward movement (to charger or parking spot)
-    is_backward = next_node.get("is_charger", False) or next_node.get(
-        "is_parking_spot", False
-    )
+    is_backward = is_reversed_node(next_node)
 
     # Determine direction based on coordinate change
     direction = ""

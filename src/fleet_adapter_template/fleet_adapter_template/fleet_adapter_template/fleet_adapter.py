@@ -30,8 +30,8 @@ from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
 import logging
 import networkx as nx
-from .RobotClientAPI import RobotAPI, calculate_path
-from .utils import is_reversed_node
+from .RobotClientAPI import RobotAPI
+from .utils import is_reversed_node, calculate_path
 
 from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSHistoryPolicy as History
