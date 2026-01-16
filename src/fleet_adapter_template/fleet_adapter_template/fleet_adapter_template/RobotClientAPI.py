@@ -21,8 +21,10 @@ will need to make http request calls to the appropriate endpoints within
 these functions.
 """
 
+from datetime import datetime, timezone
 import json
 import logging
+from time import time
 import networkx as nx
 import paho.mqtt.client as mqtt
 from .utils import create_vda5050_order
@@ -110,12 +112,24 @@ class RobotAPI:
         return False
 
     def stop(self, robot_name: str):
-        """Command the robot to stop.
-        Return True if robot has successfully stopped. Else False."""
-        # ------------------------ #
-        # IMPLEMENT YOUR CODE HERE #
-        # ------------------------ #
-        return False
+        stop_action = {
+            "actionId": str(mqtt.uuid.uuid4()),
+            "actionType": "cancelOrder",
+            "blockingType": "HARD",
+        }
+
+        instant_action = {
+            "headerId": int(time()),
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "version": "2.0.0",
+            "manufacturer": "OSRF",
+            "serialNumber": robot_name,
+            "actions": [stop_action],
+        }
+        self.client.publish(
+            f"{self.mqtt_topic}/{robot_name}/instantActions", json.dumps(instant_action)
+        )
+        return True
 
     def get_robot_order(self, robot_name: str):
         return self.robot_orders.get(robot_name, None)

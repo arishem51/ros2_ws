@@ -75,7 +75,6 @@ def calculate_path(
             heuristic=lambda u, v: heuristic(u, v, graph),
             weight="weight",
         )
-        logger.info(f"Path from {start_node_name} to {goal_node_name}: {path}")
         return path
     except nx.NetworkXNoPath:
         logger.error(f"No path found from {start_node_name} to {goal_node_name}")

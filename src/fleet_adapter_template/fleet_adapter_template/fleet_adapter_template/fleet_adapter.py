@@ -56,7 +56,6 @@ def load_navigation_graph(nav_graph_path: str) -> nx.DiGraph:
         for idx, vertex in enumerate(vertices):
             x, y, props = vertex
             name = props.get("name", f"qr_{idx}").replace("qr_", "")
-            logger.info(f"Node: {name} {props}")
             graph.add_node(name, x=x, y=y, **props)
 
         for idx, lane in enumerate(lanes):
@@ -77,9 +76,6 @@ def load_navigation_graph(nav_graph_path: str) -> nx.DiGraph:
             speed_limit = lane_props.get("speed_limit", 12)
             graph.add_edge(u, v, weight=distance, speed_limit=speed_limit)
 
-    logger.info(
-        f"Loaded navigation graph with {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges"
-    )
     return graph
 
 
@@ -296,6 +292,7 @@ class RobotAdapter:
 
     def stop(self, activity):
         execution = self.execution
+        logger.info(f"Stopping activity: {activity}")
         if execution is not None:
             if execution.identifier.is_same(activity):
                 self.execution = None
@@ -338,7 +335,8 @@ class RobotAdapter:
             return math.pi
         return self.prev_theta
 
-    def get_position(self, last_node_id: str):
+    def get_position(self):
+        last_node_id = self.api.get_last_node_id(self.name)
         node = self.api.graph.nodes.get(last_node_id, None)
         if node is None:
             return None
@@ -414,7 +412,7 @@ def parallel(f):
 
 @parallel
 def update_robot(robot: RobotAdapter):
-    position = robot.get_position(robot.api.get_last_node_id(robot.name))
+    position = robot.get_position()
     battery_soc = robot.get_battery_soc()
     if position is None or battery_soc is None:
         return
