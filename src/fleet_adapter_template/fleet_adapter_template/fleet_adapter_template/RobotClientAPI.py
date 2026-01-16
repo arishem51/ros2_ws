@@ -157,6 +157,11 @@ class RobotAPI:
     def get_last_node_id(self, robot_name: str):
         return self.robot_state_data.get(robot_name, {}).get("lastNodeId", None)
 
+    def get_distance_since_last_node(self, robot_name: str):
+        return min(
+            self.robot_state_data.get(robot_name, {}).get("distanceSinceLastNode", 0), 1
+        )
+
     def get_node_states(self, robot_name: str):
         return self.robot_state_data.get(robot_name, {}).get("nodeStates", None)
 

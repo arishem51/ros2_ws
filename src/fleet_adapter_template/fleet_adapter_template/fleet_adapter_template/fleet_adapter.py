@@ -24,7 +24,6 @@ import math
 import rclpy
 import rclpy.node
 from rmf_fleet_msgs.msg import ClosedLanes, LaneRequest
-from rmf_task_msgs.msg import BidResponse
 
 import rmf_adapter
 from rmf_adapter import Adapter
@@ -32,7 +31,7 @@ import rmf_adapter.easy_full_control as rmf_easy
 import logging
 import networkx as nx
 from .RobotClientAPI import RobotAPI
-from .utils import calculate_yaw, is_reversed_node, calculate_path
+from .utils import calculate_yaw, is_reversed_node, calculate_path, logger_info
 
 from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSHistoryPolicy as History
@@ -208,6 +207,8 @@ class RobotAdapter:
         self.api = api
         self.fleet_handle = fleet_handle
         self.prev_theta = 0
+        self.next_node = None
+        self.logger_info = logger_info()
 
     def update(self, state):
         activity_identifier = None
@@ -311,31 +312,37 @@ class RobotAdapter:
         # ------------------------ #
         return
 
+    def update_next_node(self):
+        node_states = self.api.get_node_states(self.name)
+        last_node_id = self.api.get_last_node_id(self.name)
+        if last_node_id is not None and len(node_states) > 0:
+            next_node_id = node_states[0]["nodeId"]
+            if next_node_id == last_node_id and len(node_states) > 1:
+                next_node_id = node_states[1]["nodeId"]
+            self.next_node = self.api.graph.nodes.get(next_node_id, None)
+        else:
+            self.next_node = None
+
     def get_orientation(self):
         last_node_id = self.api.get_last_node_id(self.name)
         if last_node_id is not None:
-            next_node_id = None
-            node_states = self.api.get_node_states(self.name)
             cur_node = self.api.graph.nodes.get(last_node_id, None)
-            if node_states is not None and len(node_states) > 0:
-                next_node_id = node_states[0]["nodeId"]
-                if next_node_id == last_node_id and len(node_states) > 1:
-                    next_node_id = node_states[1]["nodeId"]
-                next_node = self.api.graph.nodes.get(next_node_id, None)
-                if cur_node is None or next_node is None:
-                    return self.prev_theta
-                yaw = calculate_yaw(
-                    cur_node["x"],
-                    cur_node["y"],
-                    next_node["x"],
-                    next_node["y"],
-                    is_reversed_node(next_node),
-                )
-                self.prev_theta = yaw
-                return yaw
-        if is_reversed_node(cur_node):
-            self.prev_theta = math.pi
-            return math.pi
+            next_node = self.next_node
+            if cur_node is None or next_node is None:
+                if is_reversed_node(cur_node):
+                    self.prev_theta = math.pi
+                    return math.pi
+                return self.prev_theta
+
+            yaw = calculate_yaw(
+                cur_node["x"],
+                cur_node["y"],
+                next_node["x"],
+                next_node["y"],
+                is_reversed_node(next_node),
+            )
+            self.prev_theta = yaw
+            return yaw
         return self.prev_theta
 
     def get_position(self):
@@ -344,10 +351,20 @@ class RobotAdapter:
         if node is None:
             return None
         orientation = self.get_orientation()
-        return [node.get("x", 0), node.get("y", 0), orientation]
+        if orientation == 0.0:
+            self.logger_info(
+                f"VAGV2 orientation: {orientation} at {last_node_id} and next node {self.next_node}"
+            )
+        distance_since_last_node = self.api.get_distance_since_last_node(self.name)
+        x = node.get("x", 0) + distance_since_last_node * math.cos(orientation)
+        y = node.get("y", 0) + distance_since_last_node * math.sin(orientation)
+        return [x, y, orientation]
 
     def get_battery_soc(self):
         return self.api.get_battery_charge(self.name) / 100.0
+
+    def update_local_state(self):
+        self.update_next_node()
 
 
 def ros_connections(node, robots, fleet_handle):
@@ -416,6 +433,7 @@ def parallel(f):
 
 @parallel
 def update_robot(robot: RobotAdapter):
+    robot.update_local_state()
     position = robot.get_position()
     battery_soc = robot.get_battery_soc()
     if position is None or battery_soc is None:

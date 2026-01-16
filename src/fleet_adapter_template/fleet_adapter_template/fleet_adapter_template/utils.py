@@ -190,3 +190,28 @@ def calculate_yaw(x1, y1, x2, y2, reverse=False):
         yaw += math.pi
     yaw = (yaw + math.pi) % (2 * math.pi) - math.pi
     return yaw
+
+
+def logger_info():
+    counter = 0
+    prev_msg = ""
+    should_print = True
+
+    def log(message):
+        nonlocal counter, prev_msg, should_print
+        if should_print:
+            print(message)
+            prev_msg = message
+            should_print = False
+        else:
+            if prev_msg == message:
+                counter += 1
+                if counter > 99:
+                    should_print = True
+            else:
+                counter = 0
+                prev_msg = message
+                should_print = True
+        return (message, counter)
+
+    return log
