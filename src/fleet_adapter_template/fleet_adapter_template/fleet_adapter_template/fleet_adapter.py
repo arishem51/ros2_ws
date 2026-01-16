@@ -214,11 +214,14 @@ class RobotAdapter:
         activity_identifier = None
         execution = self.execution
         if execution:
-            if self.api.is_command_completed(self.name):
+            is_command_completed, error_level = self.api.is_command_completed(self.name)
+            if is_command_completed:
                 execution.finished()
                 self.execution = None
-            else:
-                activity_identifier = execution.identifier
+            elif error_level == "FATAL" or error_level == "WARNING":
+                self.execution = None
+                self.api.stop(self.name)
+            activity_identifier = execution.identifier
 
         self.update_handle.update(state, activity_identifier)
 
@@ -351,13 +354,17 @@ class RobotAdapter:
         if node is None:
             return None
         orientation = self.get_orientation()
-        if orientation == 0.0:
-            self.logger_info(
-                f"VAGV2 orientation: {orientation} at {last_node_id} and next node {self.next_node}"
-            )
         distance_since_last_node = self.api.get_distance_since_last_node(self.name)
-        x = node.get("x", 0) + distance_since_last_node * math.cos(orientation)
-        y = node.get("y", 0) + distance_since_last_node * math.sin(orientation)
+        next_node = self.next_node
+        x = node.get("x", 0)
+        y = node.get("y", 0)
+        if distance_since_last_node > 0 and next_node is not None:
+            dx = next_node["x"] - node["x"]
+            dy = next_node["y"] - node["y"]
+            seg_len = math.hypot(dx, dy)
+            if seg_len > 0:
+                x += distance_since_last_node * dx / seg_len
+                y += distance_since_last_node * dy / seg_len
         return [x, y, orientation]
 
     def get_battery_soc(self):

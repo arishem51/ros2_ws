@@ -135,18 +135,26 @@ class RobotAPI:
         return self.robot_orders.get(robot_name, None)
 
     def is_command_completed(self, robot_name: str):
+        robot_errors = self.robot_state_data.get(robot_name, {}).get("errors", [])
+        if len(robot_errors) > 0:
+            for error in robot_errors:
+                logger.info(f"Robot {robot_name} has error: {error}")
+                error_level = error.get("errorLevel", None)
+                if error_level is not None:
+                    return False, error_level
+
         if self.get_last_node_id(robot_name) == self.prev_robot_des_qr.get(
             robot_name, None
         ):
-            return True
+            return True, None
         if robot_name in self.robot_orders:
             if self.get_last_node_id(robot_name) is None:
                 return False
             cur_order = self.robot_orders[robot_name]
             if cur_order["nodes"][-1]["nodeId"] == self.get_last_node_id(robot_name):
                 del self.robot_orders[robot_name]
-                return True
-        return False
+                return True, None
+        return False, None
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
