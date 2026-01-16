@@ -41,78 +41,78 @@ class TaskRequester(Node):
 
     def __init__(self, argv=sys.argv):
         """Initialize a task requester."""
-        super().__init__('task_requester')
+        super().__init__("task_requester")
         parser = argparse.ArgumentParser()
-        parser.add_argument('-F', '--fleet', type=str, help='Fleet name')
-        parser.add_argument('-R', '--robot', type=str, help='Robot name')
+        parser.add_argument("-F", "--fleet", type=str, help="Fleet name")
+        parser.add_argument("-R", "--robot", type=str, help="Robot name")
         parser.add_argument(
-            '-p',
-            '--place',
+            "-p",
+            "--place",
             required=True,
             type=str,
-            help='Place to go to',
-            nargs='+',
+            help="Place to go to",
+            nargs="+",
         )
         parser.add_argument(
-            '-o',
-            '--orientation',
+            "-o",
+            "--orientation",
             required=False,
             type=float,
-            help='Orientation to face in degrees (optional)',
+            help="Orientation to face in degrees (optional)",
         )
         parser.add_argument(
-            '-m',
-            '--prefer-same-map',
+            "-m",
+            "--prefer-same-map",
             required=False,
-            action='store_true',
+            action="store_true",
             help=(
-                'When choosing between multiple destination options, prefer '
-                'an option on the same map as the starting location.'
+                "When choosing between multiple destination options, prefer "
+                "an option on the same map as the starting location."
             ),
         )
         parser.add_argument(
-            '-st',
-            '--start_time',
-            help='Start time from now in secs, default: 0',
+            "-st",
+            "--start_time",
+            help="Start time from now in secs, default: 0",
             type=int,
             default=0,
         )
         parser.add_argument(
-            '-pt',
-            '--priority',
-            help='Priority value for this request',
+            "-pt",
+            "--priority",
+            help="Priority value for this request",
             type=int,
             default=0,
         )
         parser.add_argument(
-            '--use_sim_time',
-            action='store_true',
-            help='Use sim time, default: false',
+            "--use_sim_time",
+            action="store_true",
+            help="Use sim time, default: false",
         )
         parser.add_argument(
-            '--requester',
-            help='Entity that is requesting this task',
+            "--requester",
+            help="Entity that is requesting this task",
             type=str,
-            default='rmf_demos_tasks'
+            default="rmf_demos_tasks",
         )
         parser.add_argument(
-            '-e',
-            '--estimate',
-            action='store_true',
+            "-e",
+            "--estimate",
+            action="store_true",
             help=(
-                'Request an estimate instead of dispatching a task. '
-                'You must specify both the fleet and robot names for this '
-                'setting.'
+                "Request an estimate instead of dispatching a task. "
+                "You must specify both the fleet and robot names for this "
+                "setting."
             ),
         )
         parser.add_argument(
-            '--start-at-departure',
-            action='store_true',
+            "--start-at-departure",
+            action="store_true",
             help=(
-                'Request the robot to not start going to its destination '
-                'until the task start time has been reached, rather than '
-                'trying to arrive at the destination at the task start time.'
-            )
+                "Request the robot to not start going to its destination "
+                "until the task start time has been reached, rather than "
+                "trying to arrive at the destination at the task start time."
+            ),
         )
 
         self.args = parser.parse_args(argv[1:])
@@ -125,35 +125,33 @@ class TaskRequester(Node):
             durability=Durability.TRANSIENT_LOCAL,
         )
 
-        self.pub = self.create_publisher(
-            ApiRequest, 'task_api_requests', transient_qos
-        )
+        self.pub = self.create_publisher(ApiRequest, "task_api_requests", transient_qos)
 
         # enable ros sim time
         if self.args.use_sim_time:
-            self.get_logger().info('Using Sim Time')
-            param = Parameter('use_sim_time', Parameter.Type.BOOL, True)
+            self.get_logger().info("Using Sim Time")
+            param = Parameter("use_sim_time", Parameter.Type.BOOL, True)
             self.set_parameters([param])
 
         # Construct task
         msg = ApiRequest()
-        msg.request_id = 'direct_' + str(uuid.uuid4())
+        msg.request_id = "direct_" + str(uuid.uuid4())
         payload = {}
 
         if self.args.robot and self.args.fleet:
             if self.args.estimate:
-                payload['type'] = 'estimate_robot_task_request'
+                payload["type"] = "estimate_robot_task_request"
             else:
-                payload['type'] = 'robot_task_request'
-            payload['robot'] = self.args.robot
-            payload['fleet'] = self.args.fleet
+                payload["type"] = "robot_task_request"
+            payload["robot"] = self.args.robot
+            payload["fleet"] = self.args.fleet
         else:
             if self.args.estimate:
                 raise RuntimeError(
-                    'Cannot use --estimate without specifying names for both '
-                    'fleet and robot'
+                    "Cannot use --estimate without specifying names for both "
+                    "fleet and robot"
                 )
-            payload['type'] = 'dispatch_task_request'
+            payload["type"] = "dispatch_task_request"
 
         self.get_logger().info(f"Using '{payload['type']}'")
 
@@ -166,43 +164,39 @@ class TaskRequester(Node):
         # Define task request description
         one_of = []
         for place in self.args.place:
-            place_json = {'waypoint': place}
+            place_json = {"waypoint": place}
             if self.args.orientation is not None:
-                place_json['orientation'] = (
-                    self.args.orientation * math.pi / 180.0
-                )
+                place_json["orientation"] = self.args.orientation * math.pi / 180.0
             one_of.append(place_json)
 
-        go_to_description = {'one_of': one_of}
+        go_to_description = {"one_of": one_of}
 
         if self.args.prefer_same_map:
-            go_to_description['constraints'] = [
-                {'category': 'prefer_same_map'}
-            ]
+            go_to_description["constraints"] = [{"category": "prefer_same_map"}]
 
         if self.args.start_at_departure:
-            go_to_description['start_at_departure'] = True
+            go_to_description["start_at_departure"] = True
 
         go_to_activity = {
-            'category': 'go_to_place',
-            'description': go_to_description,
+            "category": "go_to_place",
+            "description": go_to_description,
         }
 
         rmf_task_request = {
-            'category': 'compose',
-            'description': {
-                'category': 'go_to_place',
-                'phases': [{'activity': go_to_activity}],
+            "category": "compose",
+            "description": {
+                "category": "go_to_place",
+                "phases": [{"activity": go_to_activity}],
             },
-            'unix_millis_request_time': start_time,
-            'unix_millis_earliest_start_time': start_time,
-            'requester': self.args.requester,
+            "unix_millis_request_time": start_time,
+            "unix_millis_earliest_start_time": start_time,
+            "requester": self.args.requester,
         }
 
         if self.args.fleet:
-            rmf_task_request['fleet_name'] = self.args.fleet
+            rmf_task_request["fleet_name"] = self.args.fleet
 
-        payload['request'] = rmf_task_request
+        payload["request"] = rmf_task_request
 
         msg.json_msg = json.dumps(payload)
 
@@ -211,10 +205,10 @@ class TaskRequester(Node):
                 self.response.set_result(json.loads(response_msg.json_msg))
 
         self.sub = self.create_subscription(
-            ApiResponse, 'task_api_responses', receive_response, 10
+            ApiResponse, "task_api_responses", receive_response, 10
         )
 
-        print(f'Json msg payload: \n{json.dumps(payload, indent=2)}')
+        print(f"Json msg payload: \n{json.dumps(payload, indent=2)}")
 
         self.pub.publish(msg)
 
@@ -229,14 +223,14 @@ def main(argv=sys.argv):
 
     task_requester = TaskRequester(args_without_ros)
     rclpy.spin_until_future_complete(
-        task_requester, task_requester.response, timeout_sec=5.0
+        task_requester, task_requester.response, timeout_sec=10.0
     )
     if task_requester.response.done():
-        print(f'Got response: \n{task_requester.response.result()}')
+        print(f"Got response: \n{task_requester.response.result()}")
     else:
-        print('Did not get a response')
+        print("Did not get a response")
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)

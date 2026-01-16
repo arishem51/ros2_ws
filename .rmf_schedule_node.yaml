@@ -41,8 +41,8 @@
         type: Circle
         index: 1
       shape_context:
-        - 0.5
-        - 0.59999999999999998
+        - 0.34999999999999998
+        - 0.45000000000000001
 - operation: Add
   participant_description:
     name: VAGV2
@@ -56,5 +56,5 @@
         type: Circle
         index: 1
       shape_context:
-        - 0.5
-        - 0.59999999999999998
+        - 0.34999999999999998
+        - 0.45000000000000001

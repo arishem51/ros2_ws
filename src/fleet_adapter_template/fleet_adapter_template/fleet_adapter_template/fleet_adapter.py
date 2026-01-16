@@ -24,6 +24,7 @@ import math
 import rclpy
 import rclpy.node
 from rmf_fleet_msgs.msg import ClosedLanes, LaneRequest
+from rmf_task_msgs.msg import BidResponse
 
 import rmf_adapter
 from rmf_adapter import Adapter
@@ -277,6 +278,7 @@ class RobotAdapter:
         return None
 
     def navigate(self, destination, execution):
+        ## fix me, should have retry logic
         self.execution = execution
         self.node.get_logger().info(
             f"Commanding [{self.name}] to navigate to {destination.position} "
@@ -302,6 +304,7 @@ class RobotAdapter:
         """Trigger a custom action you would like your robot to perform.
         You may wish to use RobotAPI.start_activity to trigger different
         types of actions to your robot."""
+        logger.info(f"Executing action: {category} with description: {description}")
         self.execution = execution
         # ------------------------ #
         # IMPLEMENT YOUR CODE HERE #
@@ -348,7 +351,8 @@ class RobotAdapter:
 
 
 def ros_connections(node, robots, fleet_handle):
-    fleet_name = fleet_handle.more().fleet_name
+    fleet_update_handle = fleet_handle.more()
+    fleet_name = fleet_update_handle.fleet_name
     transeint_qos = QoSProfile(
         history=History.KEEP_LAST,
         depth=1,
@@ -373,8 +377,8 @@ def ros_connections(node, robots, fleet_handle):
         if msg.close_lanes:
             print(f"Closing lanes: {msg.close_lanes}")
 
-        fleet_handle.more().open_lanes(msg.open_lanes)
-        fleet_handle.more().close_lanes(msg.close_lanes)
+        fleet_update_handle.open_lanes(msg.open_lanes)
+        fleet_update_handle.close_lanes(msg.close_lanes)
 
         for lane_idx in msg.close_lanes:
             closed_lanes.add(lane_idx)
