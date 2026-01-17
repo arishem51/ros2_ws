@@ -172,6 +172,8 @@ class RobotAdapter:
         self.fleet_handle = fleet_handle
         self.prev_theta = 0
         self.next_node = None
+        self.cancel_cmd_event = threading.Event()
+        self.issue_cmd_thread = None
         self.logger_info = logger_info()
 
     def update(self, state):
@@ -245,11 +247,6 @@ class RobotAdapter:
             f"task id: {self.update_handle.more().current_task_id()}"
         )
 
-        cur_qr = (
-            self.next_node["name"]
-            if self.api.get_distance_since_last_node(self.name) > 0
-            else self.api.get_last_node_id(self.name)
-        )
         des_qr = self.pose_to_qr(destination.position)
         path = calculate_path(
             self.api.graph,
@@ -258,8 +255,15 @@ class RobotAdapter:
         )
 
         task_id = self.update_handle.more().current_task_id()
-        self.api.navigate(
-            self.name, path, task_id, destination.map, destination.speed_limit
+        self.attempt_cmd_until_success(
+            cmd=self.api.navigate,
+            args=(
+                self.name,
+                path,
+                task_id,
+                destination.map,
+                destination.speed_limit,
+            ),
         )
 
     def stop(self, activity):
@@ -338,6 +342,28 @@ class RobotAdapter:
 
     def update_local_state(self):
         self.update_next_node()
+
+    def cancel_cmd_attempt(self):
+        if self.issue_cmd_thread is not None:
+            self.cancel_cmd_event.set()
+            if self.issue_cmd_thread.is_alive():
+                self.issue_cmd_thread.join()
+                self.issue_cmd_thread = None
+        self.cancel_cmd_event.clear()
+
+    def attempt_cmd_until_success(self, cmd, args):
+        self.cancel_cmd_attempt()
+
+        def loop():
+            while not cmd(*args):
+                self.node.get_logger().warn(
+                    f"Failed to contact fleet manager for robot {self.name}"
+                )
+                if self.cancel_cmd_event.wait(1.0):
+                    break
+
+        self.issue_cmd_thread = threading.Thread(target=loop, args=())
+        self.issue_cmd_thread.start()
 
 
 def ros_connections(node, robots, fleet_handle):
