@@ -14,7 +14,6 @@
 
 import sys
 import argparse
-from rclpy.qos import QoSProfile, qos_profile_system_default
 import yaml
 import time
 import threading
@@ -23,60 +22,25 @@ import math
 
 import rclpy
 import rclpy.node
-from rmf_fleet_msgs.msg import ClosedLanes, LaneRequest
 
 import rmf_adapter
 from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
 import logging
-import networkx as nx
 from .RobotClientAPI import RobotAPI
-from .utils import calculate_yaw, is_reversed_node, calculate_path, logger_info
-
-from rclpy.qos import QoSDurabilityPolicy as Durability
-from rclpy.qos import QoSHistoryPolicy as History
-from rclpy.qos import QoSReliabilityPolicy as Reliability
+from .utils import (
+    calculate_yaw,
+    is_reversed_node,
+    calculate_path,
+    logger_info,
+    load_navigation_graph,
+)
 
 logging.basicConfig(
     level=logging.INFO, format="[%(levelname)s] %(asctime)s %(message)s"
 )
 
 logger = logging.getLogger(__name__)
-
-
-def load_navigation_graph(nav_graph_path: str) -> nx.DiGraph:
-    graph = nx.DiGraph()
-
-    with open(nav_graph_path, "r") as f:
-        graph_data = yaml.safe_load(f)
-        vertices = graph_data["levels"]["L1"]["vertices"]
-        lanes = graph_data["levels"]["L1"]["lanes"]
-
-        # First pass: create nodes with coordinates
-        for idx, vertex in enumerate(vertices):
-            x, y, props = vertex
-            name = props.get("name", f"qr_{idx}").replace("qr_", "")
-            graph.add_node(name, x=x, y=y, **props)
-
-        for idx, lane in enumerate(lanes):
-            u_idx, v_idx, lane_props = (
-                lane[0],
-                lane[1],
-                lane[2] if len(lane) > 2 else {},
-            )
-            u = vertices[u_idx][2].get("name", f"qr_{u_idx}").replace("qr_", "")
-            v = vertices[v_idx][2].get("name", f"qr_{v_idx}").replace("qr_", "")
-
-            u_node = graph.nodes[u]
-            v_node = graph.nodes[v]
-            distance = math.sqrt(
-                (u_node["x"] - v_node["x"]) ** 2 + (u_node["y"] - v_node["y"]) ** 2
-            )
-
-            speed_limit = lane_props.get("speed_limit", 12)
-            graph.add_edge(u, v, weight=distance, speed_limit=speed_limit)
-
-    return graph
 
 
 # ------------------------------------------------------------------------------
@@ -270,31 +234,33 @@ class RobotAdapter:
                 min_dist = dist
         return closest_qr
 
-    def get_pose(self):
-        robot_name = self.name
-        last_node_id = self.api.get_last_node_id(robot_name)
-        if last_node_id and (node := self.api.graph.nodes.get(last_node_id, None)):
-            return [
-                node.get("x", 0),
-                node.get("y", 0),
-                self.get_orientation(),
-            ]
-        return None
-
     def navigate(self, destination, execution):
         ## fix me, should have retry logic
+
+        ## robot adapter should not know about the qr, it should be handled by the api
         self.execution = execution
         self.node.get_logger().info(
             f"Commanding [{self.name}] to navigate to {destination.position} "
             f"on map [{destination.map}]"
+            f"task id: {self.update_handle.more().current_task_id()}"
         )
 
+        cur_qr = (
+            self.next_node["name"]
+            if self.api.get_distance_since_last_node(self.name) > 0
+            else self.api.get_last_node_id(self.name)
+        )
+        des_qr = self.pose_to_qr(destination.position)
         path = calculate_path(
             self.api.graph,
-            self.pose_to_qr(self.get_pose()),
-            self.pose_to_qr(destination.position),
+            self.api.get_last_node_id(self.name),
+            des_qr,
         )
-        self.api.navigate(self.name, path, destination.map, destination.speed_limit)
+
+        task_id = self.update_handle.more().current_task_id()
+        self.api.navigate(
+            self.name, path, task_id, destination.map, destination.speed_limit
+        )
 
     def stop(self, activity):
         execution = self.execution
@@ -375,55 +341,21 @@ class RobotAdapter:
 
 
 def ros_connections(node, robots, fleet_handle):
-    fleet_update_handle = fleet_handle.more()
-    fleet_name = fleet_update_handle.fleet_name
-    transeint_qos = QoSProfile(
-        history=History.KEEP_LAST,
-        depth=1,
-        reliability=Reliability.RELIABLE,
-        durability=Durability.TRANSIENT_LOCAL,
-    )
+    # def fleet_states_callback(msg):
+    #     for robot in msg.robots:
+    #         logger.info(f"Robot {robot}")
+    #         if robot.name in robots and robot.task_id != "":
+    #             robots[robot.name].task_queue.append(robot.task_id)
 
-    close_lanes_pub = node.create_publisher(
-        ClosedLanes, "closed_lanes", qos_profile=transeint_qos
-    )
-
-    closed_lanes = set()
-
-    def lane_request_cb(msg):
-        if msg.fleet_name and msg.fleet_name != fleet_name:
-            print(f"Ignoring lane request for fleet [{msg.fleet_name}]")
-            return
-
-        if msg.open_lanes:
-            print(f"Opening lanes: {msg.open_lanes}")
-
-        if msg.close_lanes:
-            print(f"Closing lanes: {msg.close_lanes}")
-
-        fleet_update_handle.open_lanes(msg.open_lanes)
-        fleet_update_handle.close_lanes(msg.close_lanes)
-
-        for lane_idx in msg.close_lanes:
-            closed_lanes.add(lane_idx)
-
-        for lane_idx in msg.open_lanes:
-            closed_lanes.remove(lane_idx)
-
-        state_msg = ClosedLanes()
-        state_msg.fleet_name = fleet_name
-        state_msg.closed_lanes = list(closed_lanes)
-        close_lanes_pub.publish(state_msg)
-
-    lane_request_sub = node.create_subscription(
-        LaneRequest,
-        "lane_closure_requests",
-        lane_request_cb,
-        qos_profile=qos_profile_system_default,
-    )
+    # fleet_states_sub = node.create_subscription(
+    #     FleetState,
+    #     "/fleet_states",
+    #     fleet_states_callback,
+    #     qos_profile=qos_profile_system_default,
+    # )
 
     return [
-        lane_request_sub,
+        # fleet_states_sub,
     ]
 
     ## todo: task management with updateOrderId instead of creating new order for each navigate calling

@@ -27,7 +27,7 @@ import logging
 from time import time
 import networkx as nx
 import paho.mqtt.client as mqtt
-from .utils import create_vda5050_order
+from .utils import create_vda5050_order, update_vda5050_order
 
 logger = logging.getLogger(__name__)
 
@@ -48,16 +48,16 @@ class RobotAPI:
         self.timeout = 5.0
         self.debug = False
         self.robot_state_data = {}
+        self.robot_orders = {}
+        self.goal_qr = {}
+        self.graph = graph
+        self.task_order_data = {}
         self.client = mqtt.Client(self.mqtt_client_id)
         self.client.on_message = self.on_message
         self.client.on_connect = self.on_connect
         self.client.username_pw_set(self.mqtt_username, self.mqtt_password)
         self.client.connect(self.mqtt_broker, keepalive=self.mqtt_keepalive)
         self.client.loop_start()
-        self.robot_orders = {}
-        self.prev_robot_des_qr = {}
-
-        self.graph = graph
 
     def check_connection(self):
         return self.client.is_connected()
@@ -76,18 +76,29 @@ class RobotAPI:
         # ------------------------ #
         return False
 
-    def navigate(self, robot_name: str, path, map_name: str, speed_limit=0.0):
+    def navigate(
+        self, robot_name: str, path, task_id: str, map_name: str, speed_limit=0.0
+    ):
         if path is None or len(path) == 0:
             return False
-
-        next_qr = path[-1]
-        self.prev_robot_des_qr[robot_name] = next_qr
-
-        if self.get_last_node_id(robot_name) == next_qr and len(path) == 1:
+        if len(path) == 1:
             return True
 
-        order = create_vda5050_order(self.graph, robot_name, path)
+        goal_qr = path[-1]
+        self.goal_qr[robot_name] = goal_qr
+        order = None
 
+        if task_id in self.task_order_data:
+            order = self.task_order_data[task_id]
+            order_nodes = order["nodes"]
+            if len(order_nodes) == len(path) and all(
+                node["nodeId"] == pid for node, pid in zip(order_nodes, path)
+            ):
+                return True
+            order = update_vda5050_order(self.graph, order, path)
+        else:
+            order = create_vda5050_order(self.graph, robot_name, path)
+        self.task_order_data[task_id] = order
         if order is None:
             return False
 
@@ -143,9 +154,7 @@ class RobotAPI:
                 if error_level is not None:
                     return False, error_level
 
-        if self.get_last_node_id(robot_name) == self.prev_robot_des_qr.get(
-            robot_name, None
-        ):
+        if self.get_last_node_id(robot_name) == self.goal_qr.get(robot_name, None):
             return True, None
         if robot_name in self.robot_orders:
             if self.get_last_node_id(robot_name) is None:
