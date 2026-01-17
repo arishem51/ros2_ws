@@ -90,10 +90,11 @@ class RobotAPI:
 
         if task_id in self.task_order_data:
             order = self.task_order_data[task_id]
-            order_nodes = order["nodes"]
-            if len(order_nodes) == len(path) and all(
-                node["nodeId"] == pid for node, pid in zip(order_nodes, path)
-            ):
+            existing_path = [node["nodeId"] for node in order.get("nodes", [])]
+            if existing_path == path:
+                logger.info(
+                    f"Allow navigate for {robot_name}: path is already in order but not send order"
+                )
                 return True
             order = update_vda5050_order(self.graph, order, path)
         else:

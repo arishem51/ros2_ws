@@ -237,20 +237,23 @@ class RobotAdapter:
         return closest_qr
 
     def navigate(self, destination, execution):
-        ## fix me, should have retry logic
-
-        ## robot adapter should not know about the qr, it should be handled by the api
         self.execution = execution
-        self.node.get_logger().info(
-            f"Commanding [{self.name}] to navigate to {destination.position} "
-            f"on map [{destination.map}]"
-            f"task id: {self.update_handle.more().current_task_id()}"
-        )
+        # self.node.get_logger().info(
+        #     f"Commanding [{self.name}] to navigate to {destination.position} "
+        #     f"on map [{destination.map}]"
+        #     f"task id: {self.update_handle.more().current_task_id()}"
+        # )
 
         des_qr = self.pose_to_qr(destination.position)
+        cur_qr = (
+            self.next_node.get("name")
+            if self.next_node is not None
+            else self.api.get_last_node_id(self.name)
+        )
+
         path = calculate_path(
             self.api.graph,
-            self.api.get_last_node_id(self.name),
+            cur_qr,
             des_qr,
         )
 
