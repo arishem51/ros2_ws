@@ -202,10 +202,12 @@ levels:
         name: qr_1012}
     - - 14.192744059762092
       - -1.341119516436108
-      - {is_charger: true, is_holding_point: true, mutex: '', name: qr_1011}
+      - {is_charger: true, is_holding_point: true, is_parking_spot: false, mutex: '',
+        name: qr_1011}
     - - 14.200318903198575
       - -2.264617627783194
-      - {is_charger: true, is_holding_point: true, mutex: '', name: qr_1010}
+      - {is_charger: true, is_holding_point: true, is_parking_spot: false, mutex: '',
+        name: qr_1010}
     - - 14.179306622511133
       - -3.206261862841756
       - {is_holding_point: true, is_parking_spot: true, mutex: '', name: qr_1104}

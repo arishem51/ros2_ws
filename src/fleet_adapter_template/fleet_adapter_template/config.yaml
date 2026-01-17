@@ -30,13 +30,15 @@ rmf_fleet:
     loop: True
     delivery: True
   actions: []
-  finishing_request: "nothing" # [park, charge, nothing]
+  finishing_request: "park" # [park, charge, nothing]
   responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
   robots:
     VAGV1:
       responsive_wait: True
+      charger: "qr_1012"
     VAGV2:
       responsive_wait: True
+      charger: "qr_1010"
   robot_state_update_frequency: 10.0 # Hz
 
 fleet_manager:
