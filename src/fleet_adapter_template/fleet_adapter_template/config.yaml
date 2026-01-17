@@ -23,22 +23,29 @@ rmf_fleet:
   tool_system:
     power: 0.0 # W
   recharge_threshold: 0.10 # Battery level below which robots in this fleet will not operate
-  recharge_soc: 0.98 # Battery level to which robots in this fleet should be charged up to during recharging tasks
+  recharge_soc: 0.4 # Battery level to which robots in this fleet should be charged up to during recharging tasks
   publish_fleet_state: 10.0 # Publish frequency for fleet state, ensure that it is same as robot_state_update_frequency
-  account_for_battery_drain: False
+  account_for_battery_drain: True
   task_capabilities: # Specify the types of RMF Tasks that robots in this fleet are capable of performing
     loop: True
     delivery: True
   actions: []
-  finishing_request: "park" # [park, charge, nothing]
+  finishing_request: "charge" # [park, charge, nothing]
+  # use_parking_reservations: True
   responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
   robots:
     VAGV1:
       responsive_wait: True
       charger: "qr_1012"
+      finishing_request: # Optionally define any robot-specific finishing request. Overrides the fleet-wide setting.
+          type: "park" # [park, charge, nothing]
+          waypoint_name: "qr_1104" # This is a required field if the finishing_request type is "park"
     VAGV2:
       responsive_wait: True
-      charger: "qr_1010"
+      charger: "qr_1011"
+      finishing_request: # Optionally define any robot-specific finishing request. Overrides the fleet-wide setting.
+          type: "park" # [park, charge, nothing]
+          waypoint_name: "qr_1103" # This is a required field if the finishing_request type is "park"
   robot_state_update_frequency: 10.0 # Hz
 
 fleet_manager:

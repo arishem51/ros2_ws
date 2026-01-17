@@ -406,7 +406,7 @@ def update_robot(robot: RobotAdapter):
     battery_soc = robot.get_battery_soc()
     if position is None or battery_soc is None:
         return
-    state = rmf_easy.RobotState("L1", position, battery_soc)
+    state = rmf_easy.RobotState("L1", position, 1.0)
 
     if robot.update_handle is None:
         robot.update_handle = robot.fleet_handle.add_robot(
